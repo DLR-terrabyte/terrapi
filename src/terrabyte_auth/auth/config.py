@@ -10,9 +10,11 @@ import json
 import logging
 import platform
 import stat
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Tuple, Union
+
+import jwt
 
 from .. import __version__
 from ..config import get_user_config_dir, get_user_data_dir
@@ -222,3 +224,40 @@ class RefreshTokenStore(PrivateJsonFile):
             "refresh_token": refresh_token,
         })
         self._write(data)
+
+    def delete_refresh_token(self, issuer: str, client_id: str):
+        data = self.load()
+        log.info("Deleting refresh token for issuer {i!r} (client {c!r})".format(i=issuer, c=client_id))
+        issuer_info: dict = data.get(_normalize_url(issuer), {})
+        issuer_info.pop(client_id, None)
+        self._write(data)
+
+    def delete_if_issued_at_older(self, issuer: str, client_id: str, than: datetime) -> bool:
+        if than.tzinfo is None:
+            than = than.replace(tzinfo=timezone.utc)
+
+        token = self.get_refresh_token(issuer, client_id)
+        if token is None:
+            return False
+
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        iat = datetime.fromtimestamp(decoded["iat"], timezone.utc)
+        if iat < than:
+            self.delete_refresh_token(issuer, client_id)
+            return True
+        return False
+
+    def delete_if_expires_sooner(self, issuer: str, client_id: str, than: datetime) -> bool:
+        if than.tzinfo is None:
+            than = than.replace(tzinfo=timezone.utc)
+
+        token = self.get_refresh_token(issuer, client_id)
+        if token is None:
+            return False
+
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        iat = datetime.fromtimestamp(decoded["exp"], timezone.utc)
+        if iat < than:
+            self.delete_refresh_token(issuer, client_id)
+            return True
+        return False
