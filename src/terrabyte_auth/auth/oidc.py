@@ -413,6 +413,7 @@ class OidcAuthenticator:
             ))
 
         result = resp.json()
+        #log.debug("Token response with keys {k}".format(k=result))
         log.debug("Token response with keys {k}".format(k=result.keys()))
         return result
 
@@ -538,7 +539,7 @@ class OidcDeviceAuthenticator(OidcAuthenticator):
         }
 
         if refresh_token is not None:
-            print("Using refres token")
+            print("Using refresh token")
             post_data["refresh_token"] = refresh_token
 
         if self._pkce:

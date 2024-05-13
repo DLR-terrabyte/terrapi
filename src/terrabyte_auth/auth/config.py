@@ -215,6 +215,27 @@ class RefreshTokenStore(PrivateJsonFile):
 
     def get_refresh_token(self, issuer: str, client_id: str) -> Union[str, None]:
         return self.get(_normalize_url(issuer), client_id, "refresh_token", default=None)
+    
+    def get_refresh_token_not_expired(self, issuer: str, client_id: str, than: datetime= datetime.now()) -> Union[str, None]:
+        if than.tzinfo is None:
+            than = than.replace(tzinfo=timezone.utc)
+
+        token = self.get_refresh_token(issuer, client_id)
+        if token is None:
+            return None
+
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        logging.info(f"jwt decoded: {decoded}")
+        try: 
+            iat = datetime.fromtimestamp(decoded["exp"], timezone.utc)
+        except:
+            logging.info(f"Failed to access exp Field in decoded refresh token. Decoded result was: {decoded} ")
+        
+        if iat < than:
+            self.delete_refresh_token(issuer, client_id)
+            return None
+        return token
+    
 
     def set_refresh_token(self, issuer: str, client_id: str, refresh_token: str):
         data = self.load()
@@ -246,6 +267,14 @@ class RefreshTokenStore(PrivateJsonFile):
             self.delete_refresh_token(issuer, client_id)
             return True
         return False
+    
+    def get_expiry_date_refresh_token(self, issuer: str, client_id: str, debug:bool = False)-> Union[datetime, None]:
+        token = self.get_refresh_token(issuer, client_id)
+        if token is None:
+            return None
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        if debug: print(decoded)
+        return datetime.fromtimestamp(decoded["exp"], timezone.utc)
 
     def delete_if_expires_sooner(self, issuer: str, client_id: str, than: datetime) -> bool:
         if than.tzinfo is None:
@@ -256,6 +285,7 @@ class RefreshTokenStore(PrivateJsonFile):
             return False
 
         decoded = jwt.decode(token, options={"verify_signature": False})
+    
         iat = datetime.fromtimestamp(decoded["exp"], timezone.utc)
         if iat < than:
             self.delete_refresh_token(issuer, client_id)

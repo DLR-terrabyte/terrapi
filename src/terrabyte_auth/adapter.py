@@ -32,14 +32,19 @@ class RequestsAdapter:
 
         if self.tokens is None:
             store = RefreshTokenStore()
-            refresh_token = store.get_refresh_token(issuer, TERRABYTE_CLIENT_ID)
+            refresh_token = store.get_refresh_token_not_expired(issuer, TERRABYTE_CLIENT_ID)
             if refresh_token:
-                print(refresh_token)
-                self.tokens = self.auth.get_tokens_from_refresh_token(
-                    refresh_token=refresh_token
-                )
+                try:
+                    self.tokens = self.auth.get_tokens_from_refresh_token(
+                        refresh_token=refresh_token
+                    )
+                except:
+                    #toDo add logging infrastructure?
+                    print("Token not valid")
+                    refresh_token=None
+
                 # TODO get access token from refresh_token
-            else:
+            if refresh_token is None:
                 self.tokens = self.auth.get_tokens(True)
                 if self.tokens.refresh_token:
                     store.set_refresh_token(
@@ -68,11 +73,11 @@ def create_requests_adapter(
     )
 
 
-def wrap_request(session: requests.Session, url: str, *args, **kwargs):
+def wrap_request(session: requests.Session, url: str,client_id: str=TERRABYTE_CLIENT_ID, *args, **kwargs):
     session = requests.Session()
     request = requests.Request(url=url, *args, **kwargs)
     adapter = create_requests_adapter(
-        TERRABYTE_CLIENT_ID, TERRABYTE_AUTH_URL
+        client_id, TERRABYTE_AUTH_URL
     )
     request = adapter(request)
     prepped = session.prepare_request(request)
