@@ -122,23 +122,26 @@ if checkItem:
 #stac_cmd(["--publicURL", "https://geoservice.dlr.de/eoc/ogc/stac", "collection", "list", "-t", "-d"])
 
 #create when exists
-print("Item create test")
-stac_cmd(["item","create","-j", item_json_str, "di39rer.terrapi4"])
-print("Item test create existing item")
-stac_cmd(["item","create","-j", item_json_str, "di39rer.terrapi4"])
-print("Item test update existing item")
-stac_cmd(["item","update","-j", item_json_str, "di39rer.terrapi4"])
+if False:
+    print("Item create test")
+    stac_cmd(["item","create","-j", item_json_str, "di39rer.terrapi4"])
+    print("Item test create existing item")
+    stac_cmd(["item","create","-j", item_json_str, "di39rer.terrapi4"])
+    print("Item test update existing item")
+    stac_cmd(["item","update","-j", item_json_str, "di39rer.terrapi4"])
 
-stac_cmd(["item","delete", "di39rer.terrapi4","test_item","--yes"])
-print("Update non existing Item")
-stac_cmd(["item","update","-j", item_json_str, "di39rer.terrapi4"])
+    stac_cmd(["item","delete", "di39rer.terrapi4","test_item","--yes"])
+    print("Update non existing Item")
+    stac_cmd(["item","update","-j", item_json_str, "di39rer.terrapi4"])
 
 
-stac_cmd(["collection","create","--id","di39rer.terrapi5","-u" ,"-j", collection_json_str])
-print("Create exiting collection")
-stac_cmd(["collection","create","--id","di39rer.terrapi5","-j", collection_json_str])
-stac_cmd(["--debug","collection","update","--id","di39rer.terrapi5" ,"-j", collection_json_str.replace("Private User di39rer Test Collection","Updated Private Test Collection") ])
-stac_cmd(["collection","delete","di39rer.terrapi5", "--yes"])  
-print("Update nonexiting collection")
-stac_cmd(["--debug","collection","update","--id","di39rer.terrapi5" ,"-j", collection_json_str.replace("Private User di39rer Test Collection","Updated Private Test Collection") ])
-   
+    stac_cmd(["collection","create","--id","di39rer.terrapi5","-u" ,"-j", collection_json_str])
+    print("Create exiting collection")
+    stac_cmd(["collection","create","--id","di39rer.terrapi5","-j", collection_json_str])
+    stac_cmd(["--debug","collection","update","--id","di39rer.terrapi5" ,"-j", collection_json_str.replace("Private User di39rer Test Collection","Updated Private Test Collection") ])
+    stac_cmd(["collection","delete","di39rer.terrapi5", "--yes"])  
+    print("Update nonexiting collection")
+    stac_cmd(["--debug","collection","update","--id","di39rer.terrapi5" ,"-j", collection_json_str.replace("Private User di39rer Test Collection","Updated Private Test Collection") ])
+
+#stac_cmd(['auth'])
+stac_cmd(['login',"--allowedPrefix"])

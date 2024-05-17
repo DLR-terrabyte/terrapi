@@ -3,6 +3,7 @@ import sys
 import json
 import ast
 import re
+import jwt
 from datetime import datetime, timezone, timedelta
 import traceback
 
@@ -161,6 +162,26 @@ def _get_auth_refresh_tokens(noninteractive:bool=False, force_renew: bool =False
             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
             return None
     return tokens
+
+def _get_valid_prefixes(auth_token):
+    decoded = jwt.decode(auth_token, options={"verify_signature": False})
+    rw_prefix = []
+    ro_prefix = []
+    user_id=decoded.get("preferred_username")
+    groups=decoded.get("groups")
+    if groups:
+        for g in groups:
+            if g.startswith("/dss/"):
+                g = g.replace("/dss/","")
+                if "-dss-" in g and not g.endswith("-mgr"):
+                    if g.endswith("-ro"):
+                        ro_prefix.append(g.replace("-ro","."))
+                    else:
+                        rw_prefix.append(g+".") 
+        rw_prefix.sort()
+        ro_prefix.sort()
+    if user_id: rw_prefix.insert(0, user_id+".")
+    return rw_prefix, ro_prefix
 
 
 @click.group()
@@ -440,7 +461,8 @@ def auth(wget:bool =False, gdal: bool = False, curl: bool = False, noninteractiv
 @click.option("-d", "--days", type=int,  show_default=False,default=0,help="Min Nr of days the Token still has to be valid. Will refresh Token if it expires earlier")
 @click.option("-h", "--hours", type=int, show_default=False, default=0,help="Min Nr of hours the Token still has be valid. Will refresh Token if it expires earlier")
 @click.option("-t","--till", type=click.DateTime(), default=datetime.now(), help="Date the Refresh token has to be still be valid. Will refresh Token if it expires earlier")
-def login(force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: Optional[datetime] =datetime.now(), valid: bool = False ):
+@click.option("--allowedPrefix","print_prefix", is_flag=True, show_default=False, help="Print list of readable/writable Collection Prefixes")
+def login(force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: Optional[datetime] =datetime.now(), valid: bool = False , print_prefix: bool=False):
     """Interactively login via 2FA to obtain refresh Token for the STAC API. 
     A Valid Refresh token is needed for all the other sub commands"""
     #if debugCli: click.echo("Logging in")
@@ -460,6 +482,18 @@ def login(force: bool = False, delete: bool = False, days: int = 0, hours: int =
     tokens = _get_auth_refresh_tokens(force_renew=force)
     if tokens is None:
         exit(1)
+    if(print_prefix): 
+        rw_prefix,ro_prefix = _get_valid_prefixes(tokens.access_token)
+        if rw_prefix:
+            click.echo("Writable Collection prefixes:")
+            for p in rw_prefix:
+                click.echo(p)
+        if ro_prefix:
+            click.echo("Readonly Collection prefixes:")
+            for p in ro_prefix:
+                 click.echo(p)
+
+
     
 
 stac.add_command(collection)
