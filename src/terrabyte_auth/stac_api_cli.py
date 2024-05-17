@@ -52,7 +52,7 @@ def _get_issuer(url: str) ->str:
             )
     return issuer
 
-def _getJson_response_from_signed_request(stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
+def _get_json_response_from_signed_request(stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
     url=f"{privateStacUrl}/{stac_path}" 
     if goPublic: url=f"{publicStacUrl}/{stac_path}"
     if debugCli:  print(f" Requesting {error_desc} from {url} using {method}")
@@ -73,23 +73,23 @@ def _getJson_response_from_signed_request(stac_path:str, error_desc:str, method=
         message=json_stac.get('message', None)
         match r.status_code:
             case 409:
-                click.echo(f"Stac API reported a Conflict while requesting {error_desc} when calling {url}. This can occur when the creation of an existing Collection or Item is requested or when  update is called on a non exiting Collection/Item.",err=True)
+                click.echo(f"Stac API reported a Conflict ({r.status_code}) while requesting {error_desc} when calling {url}. This can occur when the creation of an existing Collection or Item is requested or when  update is called on a non exiting Collection/Item.",err=True)
                 return None
             case 422:
                 message=json_stac.get('message', None)
-                click.echo(f"Stac API reported a Validation Error when calling {url}, Message: {message}", err=True)
+                click.echo(f"Stac API reported a Validation Error ({r.status_code}) when calling {url}, Message: {message}", err=True)
                 return None
             case 404:
                  code=json_stac.get('code', None)
-                 click.echo(f"Stac API reported a {code} when calling {url}.", err=True)
+                 click.echo(f"Stac API reported a ({r.status_code}) with {code} when calling {url}.", err=True)
                  if debugCli: click.echo(f"Response was: {json_stac}")
                  return None
             case 424:
                 
-                click.echo(f"Stac API reported a Database Error when calling {url}, Message: {message}", err=True)
+                click.echo(f"Stac API reported a Database Error ({r.status_code}) when calling {url}, Message: {message}", err=True)
                 return None
             case 500:
-                click.echo(f"Stac API reported an Internal Server Error when calling {url}, Message: {message}", err=True)
+                click.echo(f"Stac API reported an Internal Server Error ({r.status_code}) when calling {url}, Message: {message}", err=True)
                 click.echo(f" Please retry again in a few Minutes and please report the issue to the terrabyte supportdesk if it persists.", err=True)
                 return None        
         r.raise_for_status()
@@ -130,6 +130,38 @@ def _readJson_from_file_or_str(json_str:str = None, inputfile = None) ->dict:
                 exit(5)
     #should never be reached
     return {}
+
+def _get_auth_refresh_tokens(noninteractive:bool=False, force_renew: bool =False):
+    stac_issuer = _get_issuer(privateStacUrl)
+    auth = _get_device_authenticator(client_id=stacClientId)
+    if force_renew:
+        refresh_token = None
+    else:
+        refresh_token = tokenStore.get_refresh_token_not_expired(issuer=stac_issuer, client_id=stacClientId)
+   
+    if refresh_token:
+        try:
+            if debugCli: click.echo(f"Trying to obtain Tokens with stored Refresh Token")
+            tokens = auth.get_tokens_from_refresh_token(refresh_token=refresh_token)
+            if debugCli: click.echo(f"successfully obtained valid Refresh Token")
+        except Exception as e:
+           if debugCli:
+             click.echo(f"Accessing Token with stored Refresh Token failed.")
+             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+           refresh_token=None
+           if noninteractive:
+               return None
+    if refresh_token == None:
+        try:
+            tokens = auth.get_tokens(True)
+            if debugCli: click.echo(f"Storing Refresh token to file.")
+            tokenStore.set_refresh_token(issuer=stac_issuer, client_id=stacClientId, refresh_token=tokens.refresh_token)
+        except Exception as e:
+            click.echo("Login to the 2FA terrabyte System failed. The Error returned was: " )
+            click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+            return None
+    return tokens
+
 
 @click.group()
 @click.option("-p", "--public",default=False, is_flag = True, show_default = False, help="Switch to public API")
@@ -184,7 +216,7 @@ def item():
 def list(filter: str ="", title: bool = False, description: bool = False):
     """ List Collections"""
      
-    collections=_getJson_response_from_signed_request("collections", "Collections")['collections']
+    collections=_get_json_response_from_signed_request("collections", "Collections")['collections']
         
     for collection in collections:
         if re.search(filter, collection['id']):
@@ -204,7 +236,7 @@ def list(filter: str ="", title: bool = False, description: bool = False):
 def list_item(collection_id:str, filter: str ="", all: bool = False, pretty: bool = False):
     """ List Items in Collection """
      
-    featureCollection=_getJson_response_from_signed_request(f"collections/{collection_id}/items", f"Items in Collection {collection_id}")
+    featureCollection=_get_json_response_from_signed_request(f"collections/{collection_id}/items", f"Items in Collection {collection_id}")
     #['collections']
    # click.echo(json.dumps(featureCollection['features'],indent=2))
     items=featureCollection.get('features')
@@ -226,7 +258,7 @@ def delete(collection_id:str):
     if goPublic:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
-    response=_getJson_response_from_signed_request(f"collections/{collection_id}" , f"deletion of {collection_id}", method="DELETE")
+    response=_get_json_response_from_signed_request(f"collections/{collection_id}" , f"deletion of {collection_id}", method="DELETE")
     if not response:
         click.echo(f"Failed to delete Collection {collection_id}")
     else :
@@ -244,7 +276,7 @@ def delete_item(collection_id:str, item_id:str):
     if goPublic:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
-    response=_getJson_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"deletion of {collection_id}", method="DELETE")
+    response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"deletion of {collection_id}", method="DELETE")
     if not response:
         click.echo(f"Failed to delete Item {item_id} from {collection_id}")
     else :
@@ -277,7 +309,7 @@ def create(id: str = None, json_str: str = None, inputfile = None,update: bool =
     alt_code=409
     if update:
         alt_method = "PUT"
-    response=_getJson_response_from_signed_request(f"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=collection)
+    response=_get_json_response_from_signed_request(f"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=collection)
     click.echo(json.dumps(response))
 
 @item.command("create")
@@ -301,7 +333,7 @@ def create_item(collection_id:str,item_id: str = None, json_str: str = None, inp
     alt_code=409
     if update:
         alt_method = "PUT"
-    response=_getJson_response_from_signed_request(f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
+    response=_get_json_response_from_signed_request(f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
     if response: click.echo(json.dumps(response))
 
 
@@ -320,7 +352,7 @@ def update(id: str = None, json_str: str = None, inputfile = None):
         collection['id']=id
     else:
         id=collection.get('id')
-    response=_getJson_response_from_signed_request(f"collections" , f"Update Collection {id}", method="PUT", json=collection)
+    response=_get_json_response_from_signed_request(f"collections" , f"Update Collection {id}", method="PUT", json=collection)
     if response: click.echo(json.dumps(response))
       
 @item.command("update")
@@ -342,7 +374,7 @@ def update_item(collection_id:str,item_id: str = None, json_str: str = None, inp
     if collection_id is None or item_id is None:
         click.echo(f"Error None Value in Collection Id ({collection_id}) or Item ID ({item_id})",err=True)
         exit(6)
-    response=_getJson_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
+    response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
     if response: click.echo(json.dumps(response))
       
 
@@ -355,7 +387,7 @@ def update_item(collection_id:str,item_id: str = None, json_str: str = None, inp
 @click.option("-f", "--file","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
 def get(collection_id:str,outfile, pretty:bool =False):
     """ Get Metadata for single Collection from its ID"""
-    collection=_getJson_response_from_signed_request(f"collections/{id}" , f"Collection {id}", method="GET")
+    collection=_get_json_response_from_signed_request(f"collections/{id}" , f"Collection {id}", method="GET")
     if pretty:
         outfile.write(json.dumps(collection, indent=2))
     else:
@@ -370,7 +402,7 @@ def get(collection_id:str,outfile, pretty:bool =False):
 @click.option("-f", "--file","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
 def get_item(collection_id:str,item_id:str,outfile, pretty:bool =False):
     """ Get Metadata for single Collection from Collection ID and Item ID"""
-    collection=_getJson_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
+    collection=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
     if pretty:
         outfile.write(json.dumps(collection, indent=2))
     else:
@@ -385,41 +417,19 @@ def get_item(collection_id:str,item_id:str,outfile, pretty:bool =False):
 @click.option("-w", "--wget",  is_flag=True, show_default=False, default=False,help="Add Options needed by wget")
 def auth(wget:bool =False, gdal: bool = False, curl: bool = False, noninteractive:bool = False)->None:
     """ Print the single use auth token needed to directly interact with the private STAC API"""
-    stac_issuer=_get_issuer(privateStacUrl)
-    refresh_token = tokenStore.get_refresh_token_not_expired(issuer=stac_issuer, client_id=stacClientId)
-    auth = _get_device_authenticator(issuer=TERRABYTE_AUTH_URL, client_id=stacClientId)
-    if refresh_token:
-        try:
-            if debugCli: click.echo(f"Trying to obtain Tokens with stored Refresh Token")
-            tokens = auth.get_tokens_from_refresh_token(refresh_token=refresh_token)
-            click.echo(f"successfully obtained valid Refresh Token")
-        except Exception as e:
-           if debugCli:
-             click.echo(f"Accessing Token with stored Refresh Token failed.")
-             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-           refresh_token=None
-           if noninteractive:
-               exit(2)
-    if refresh_token == None:
-        try:
-            
-            tokens = auth.get_tokens(True)
-            if debugCli: click.echo(f"Storing Refresh token to file.")
-            tokenStore.set_refresh_token(issuer=TERRABYTE_AUTH_URL, client_id=stacClientId, refresh_token=tokens.refresh_token)
-        except Exception as e:
-            click.echo("Login to the 2FA terrabyte System failed. The Error returned was: " )
-            click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-            exit(1)
-    if wget: 
-        print(f' --header="Authorization:  {tokens.access_token}" ')
-        return
-    if curl: 
-        print(f' -H "Authorization: Bearer {tokens.access_token}" ')
-        return
-    if gdal:
-         print(f'GDAL_HTTP_BEARER={tokens.access_token} ')
-         return
-    print(tokens.access_token)
+    tokens = _get_auth_refresh_tokens(noninteractive)
+    if tokens:
+        if wget: 
+            print(f' --header="Authorization:  {tokens.access_token}" ')
+            return
+        if curl: 
+            print(f' -H "Authorization: Bearer {tokens.access_token}" ')
+            return
+        if gdal:
+            print(f'GDAL_HTTP_BEARER={tokens.access_token} ')
+            return
+        print(tokens.access_token)
+    else: exit(1)
     
 
 
@@ -435,41 +445,22 @@ def login(force: bool = False, delete: bool = False, days: int = 0, hours: int =
     A Valid Refresh token is needed for all the other sub commands"""
     #if debugCli: click.echo("Logging in")
     stac_issuer=_get_issuer(privateStacUrl)
-    deleted=False
     till = max(till, datetime.now()+timedelta(hours=hours, days=days)) 
     if valid:
         validity= tokenStore.get_expiry_date_refresh_token(stac_issuer, stacClientId)
         if validity:
-            click.echo(f"Refresh Token valid till: {validity}")
+            click.echo(f"Refresh Token valid till: {validity.astimezone()}")
         else:
-            click.echo(f"No Refresh Token on file") 
+            click.echo(f"No valid Refresh Token on file") 
         return 
     if delete:
         if debugCli: click.echo("Deleting Refresh Token")
         tokenStore.delete_refresh_token(stac_issuer, stacClientId)
         return
-    auth = _get_device_authenticator( client_id=stacClientId)
-    if force:
-        refresh_token = None
-    else:
-        refresh_token = tokenStore.get_refresh_token_not_expired(issuer=stac_issuer, client_id=stacClientId, than=till)
-    if refresh_token:
-        try:
-            if debugCli: click.echo(f"Trying to obtain Tokens with stored Refresh Token")
-            tokens = auth.get_tokens_from_refresh_token(refresh_token=refresh_token)
-            click.echo(f"successfully obtained valid Refresh Token")
-        except Exception:
-           if debugCli: click.echo(f"Accessing Token with stored Refresh Token failed.")
-           refresh_token=None
-    if refresh_token == None:
-        try:
-            tokens = auth.get_tokens(True)
-            if debugCli: click.echo(f"Storing Refresh token to file.")
-            tokenStore.set_refresh_token(issuer=stac_issuer, client_id=stacClientId, refresh_token=tokens.refresh_token)
-        except Exception as exp:
-            click.echo("Login to the 2FA terrabyte System failed. The Error returned was: " )
-            click.echo(exp)
-            exit(1)
+    tokens = _get_auth_refresh_tokens(force_renew=force)
+    if tokens is None:
+        exit(1)
+    
 
 stac.add_command(collection)
 stac.add_command(item)

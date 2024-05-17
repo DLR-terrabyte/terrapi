@@ -289,7 +289,7 @@ class OidcProviderInfo:
         """
         scopes = self._scopes
         if request_refresh_token and "offline_access" in self._supported_scopes:
-            scopes = scopes # | {"offline_access"}
+            scopes = scopes | {"offline_access"}
         log.debug("Using scopes: {s}".format(s=scopes))
         return " ".join(sorted(scopes))
 
@@ -505,6 +505,7 @@ class OidcDeviceAuthenticator(OidcAuthenticator):
         if self._pkce:
             post_data["code_challenge"] = self._pkce.code_challenge,
             post_data["code_challenge_method"] = self._pkce.code_challenge_method
+        log.debug(f"Sending POST Request to URL {self._device_code_url}  with data={post_data}")
         resp = self._requests.post(url=self._device_code_url, data=post_data)
         if resp.status_code != 200:
             raise OidcException("Failed to get verification URL and user code from {u!r}: {s} {r!r} {t!r}".format(
