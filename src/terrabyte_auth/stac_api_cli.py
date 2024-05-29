@@ -11,17 +11,17 @@ from typing import Optional, Union
 import requests
 from urllib.parse import urlparse, urlunparse
 
-from terrabyte_auth.settings import TERRABYTE_AUTH_URL, TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID, TERRABYTE_PUBLIC_API_URL
+from .settings import TERRABYTE_AUTH_URL, TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID, TERRABYTE_PUBLIC_API_URL
 
-from terrabyte_auth.auth.config import RefreshTokenStore
-from terrabyte_auth.auth.oidc import (
+from .auth.config import RefreshTokenStore
+from .auth.oidc import (
     OidcDeviceAuthenticator,
     AccessTokenResult,
     OidcClientInfo,
     OidcProviderInfo,
 )
 
-from terrabyte_auth.adapter import wrap_request
+from .adapter import wrap_request
 
 stacClientId = TERRABYTE_CLIENT_ID
 privateStacUrl = TERRABYTE_PRIVATE_API_URL

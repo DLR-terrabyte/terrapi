@@ -26,7 +26,7 @@ item_json_str = '{"type": "Feature", "stac_version": "1.0.0", "id": "test_item",
 if __name__ == '__main__':
     # terrabyte_auth.stac_api_cli.login.callback(delete=True)
     terrabyte_auth.stac_api_cli.login.callback(valid=True)
-    #terrabyte_auth.stac_api_cli.login.callback()
+    terrabyte_auth.stac_api_cli.login.callback()
     #terrabyte_auth.stac_api_cli.login.callback(valid=True)
    # print("Test: Create Item")
     #terrabyte_auth.stac_api_cli.list_item.callback("di39rer.terrapi4")

@@ -13,14 +13,16 @@ runner = CliRunner()
 #checks to run
 checkLogin=False
 checkauth=False
-checkCollection=False
+checkCollection=True
 checkItem=False
 checkHelp=False
+checkPublic=False
 
 
 
 def stac_cmd(args:list ,out_str_assert:list =None):
     #print("running cmd ")
+    runner = CliRunner()
     result = runner.invoke(terrabyte_auth.stac_api_cli.stac, args)
     #print("done")
     click.echo(result.stdout)
@@ -33,6 +35,7 @@ def stac_cmd(args:list ,out_str_assert:list =None):
     
 
 def terrapi_cmd(args:list ,out_str_assert:list =None):
+    runner = CliRunner()
     result = runner.invoke(terrabyte_auth.terrapi_cli.terrapi , args)
     click.echo(result.stdout)
     click.echo("------")
@@ -84,19 +87,11 @@ if checkauth:
 
 
 if checkCollection:
-    stac_cmd(["--debug","--public","collection","list"])
-    stac_cmd(["--public","collection","list"])
-    stac_cmd(["--public","collection","list"])
-    stac_cmd(["--public","collection","list", "--filter", "landsat.*", "-t", "-d"])
     stac_cmd(["collection","list","-d", "-t", "--filter", "di39"])
-    stac_cmd(["--debug","collection","list","-d", "-t", "--filter", "di39"])
-
-#stac_cmd(['login','--valid'],["Refresh Token valid till"])
-#stac_cmd(['login'])
-    stac_cmd(["--public","collection","list"])
+    
     stac_cmd(["collection","list"])
     stac_cmd(["collection","get","di39rer.terrapi1","-p"])
-    stac_cmd(["--public","collection","get","cop-dem-glo-30", "--pretty"])
+  
     stac_cmd(["--debug","collection","delete","di39rer.terrapi1","--yes"], ["di39rer.terrapi1"])
     stac_cmd(["--debug","collection","get","di39rer.terrapi1"])
 
@@ -145,3 +140,11 @@ if False:
 
 #stac_cmd(['auth'])
 stac_cmd(['login',"--allowedPrefix"])
+
+if checkPublic:
+    stac_cmd(["--public","collection","list"])
+    stac_cmd(["--public","collection","list", "--filter", "landsat.*", "-t", "-d"])
+    stac_cmd(["--public","collection","get","cop-dem-glo-30", "--pretty"])
+  
+    
+
