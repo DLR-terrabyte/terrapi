@@ -11,12 +11,14 @@ import terrabyte_auth.terrapi_cli
 runner = CliRunner()
 
 #checks to run
-checkLogin=False
-checkauth=False
-checkCollection=True
-checkItem=False
-checkHelp=False
-checkPublic=False
+checkLogin = False
+checkauth = True
+checkCollection = False
+checkItem = False
+checkHelp = False
+checkPublic = False
+checkErrorCode = False
+checkPrefix = False
 
 
 
@@ -117,7 +119,7 @@ if checkItem:
 #stac_cmd(["--publicURL", "https://geoservice.dlr.de/eoc/ogc/stac", "collection", "list", "-t", "-d"])
 
 #create when exists
-if False:
+if checkErrorCode:
     print("Item create test")
     stac_cmd(["item","create","-j", item_json_str, "di39rer.terrapi4"])
     print("Item test create existing item")
@@ -138,8 +140,12 @@ if False:
     print("Update nonexiting collection")
     stac_cmd(["--debug","collection","update","--id","di39rer.terrapi5" ,"-j", collection_json_str.replace("Private User di39rer Test Collection","Updated Private Test Collection") ])
 
+    print("Trying to create Collection of other user")
+    stac_cmd(["--debug","collection","create","--id","di93bor.terror","-u" ,"-j", collection_json_str])
+
 #stac_cmd(['auth'])
-stac_cmd(['login',"--allowedPrefix"])
+if checkPrefix:
+    stac_cmd(['login',"--allowedPrefix"])
 
 if checkPublic:
     stac_cmd(["--public","collection","list"])

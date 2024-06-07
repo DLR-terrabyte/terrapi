@@ -7,7 +7,7 @@ import jwt
 from datetime import datetime, timezone, timedelta
 import traceback
 
-from typing import Optional, Union
+from typing import Optional, Union, List
 import requests
 from urllib.parse import urlparse, urlunparse
 
@@ -29,18 +29,21 @@ publicStacUrl = TERRABYTE_PUBLIC_API_URL
 debugCli = False
 goPublic = False
 tokenStore=RefreshTokenStore()
-
+#add additial scopes to request eg for slurm
+#oidScopes=["slurmrest"]
+oidScopes=None
 
 #if needed simple stac maipulation functions
 # https://github.com/EOEPCA/open-science-catalog-builder/blob/main/osc_builder/mystac.py 
 
 #helper funtions
-def _get_device_authenticator(client_id:str)->OidcDeviceAuthenticator:
+def _get_device_authenticator(client_id:str, scopes:List[str]=None)->OidcDeviceAuthenticator:
     return OidcDeviceAuthenticator(
                 OidcClientInfo(
                     client_id = client_id,
                     provider = OidcProviderInfo(
                         issuer = TERRABYTE_AUTH_URL,
+                        scopes = scopes
                     ),
                 ),
                 use_pkce=True,
@@ -134,7 +137,7 @@ def _readJson_from_file_or_str(json_str:str = None, inputfile = None) ->dict:
 
 def _get_auth_refresh_tokens(noninteractive:bool=False, force_renew: bool =False):
     stac_issuer = _get_issuer(privateStacUrl)
-    auth = _get_device_authenticator(client_id=stacClientId)
+    auth = _get_device_authenticator(client_id=stacClientId, scopes=oidScopes)
     if force_renew:
         refresh_token = None
     else:

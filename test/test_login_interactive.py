@@ -24,7 +24,7 @@ item_json_str = '{"type": "Feature", "stac_version": "1.0.0", "id": "test_item",
 
 
 if __name__ == '__main__':
-    # terrabyte_auth.stac_api_cli.login.callback(delete=True)
+    terrabyte_auth.stac_api_cli.login.callback(delete=True)
     terrabyte_auth.stac_api_cli.login.callback(valid=True)
     terrabyte_auth.stac_api_cli.login.callback()
     #terrabyte_auth.stac_api_cli.login.callback(valid=True)
@@ -32,6 +32,9 @@ if __name__ == '__main__':
     #terrabyte_auth.stac_api_cli.list_item.callback("di39rer.terrapi4")
     #print("Test: create Collection")
     #terrabyte_auth.stac_api_cli.create.callback()
+    #terrabyte_auth.stac_api_cli.create.callback()
+    #print("Trying to create Collection of other user")
+    #stac_cmd(["--debug","collection","create","--id","di93bor.terror","-u" ,"-j", collection_json_str])
    
     
     if False:
