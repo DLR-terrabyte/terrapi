@@ -189,16 +189,17 @@ def _get_valid_prefixes(auth_token):
 
 @click.group()
 @click.option("-p", "--public",default=False, is_flag = True, show_default = False, help="Switch to public API")
-@click.option("--debug",  is_flag = True, show_default = False, default = False, help="be more verbose")
+@click.option("--debug",  is_flag = True, show_default = False, default = False, help="be more verbose", hidden=True)
 @click.option("--privateURL","private_url",type=str,   show_default = False, default = None, help="overwrite private Stac URL.  Warning expert OPTION! ")
 @click.option("--publicURL","public_url",type=str,   show_default = False, default = None, help="overwrite public Stac URL.  Warning expert OPTION! ")
-#@click.option("--clientID", default = stacClientId, help="overwrite clientID")
-def stac(debug: bool = False, public: bool = False ,private_url:str = None, public_url:str = None):
+@click.option("--clientID", default = stacClientId, help="overwrite clientID", hidden=True)
+def stac(debug: bool = False, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None):
     """Command Line for terrabyte private STAC API"""
     global debugCli
     global goPublic
     global privateStacUrl
     global publicStacUrl
+    global stacClientId
 
     if debug:
         
@@ -216,7 +217,9 @@ def stac(debug: bool = False, public: bool = False ,private_url:str = None, publ
         if debugCli: click.echo("Switching to public STAC API. Update/modify not possible")
         goPublic=True
         if debugCli: click.echo(f"Api URl is now {publicStacUrl}")
-    # stacClientId=clientid
+    if client_id:
+        if debugCli: click.echo(f"Client ID is now {client_id}")
+        stacClientId=client_id
     pass
 
 #define subcommands
