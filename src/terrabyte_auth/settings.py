@@ -22,6 +22,6 @@ TERRABYTE_AUTH_URL = os.environ.get(
 
 TERRABYTE_CLIENT_ID = os.environ.get(
     "TERRABYTE_CLIENT_ID",
-    "at.eox.hub.terrabyte-api",
-   # "de.lrz.terrabyte.stac"
+   # "at.eox.hub.terrabyte-api",
+    "de.lrz.terrabyte.stac"
 )
