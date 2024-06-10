@@ -9,6 +9,7 @@ referencing==0.30.2
 requests==2.31.0
 rpds-py==0.10.6
 six==1.16.0
-urllib3==2
+urllib3==2.0.2
 click==8.1.7
-jwt
+pyjwt==2.8.0
+
