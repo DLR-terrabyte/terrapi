@@ -223,6 +223,7 @@ def stac(debug: bool = False, public: bool = False ,private_url:str = None, publ
         if debugCli: click.echo(f"Client ID is now {client_id}")
         stacClientId=client_id
     if scope:
+        if debugCli: click.echo(f"Adding Scope(s): {scope}")
         oidScopes=scope
     pass
 
