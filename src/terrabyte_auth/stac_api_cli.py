@@ -137,6 +137,7 @@ def _readJson_from_file_or_str(json_str:str = None, inputfile = None) ->dict:
 
 def _get_auth_refresh_tokens(noninteractive:bool=False, force_renew: bool =False):
     stac_issuer = _get_issuer(privateStacUrl)
+    if debugCli: click.echo(f"Scopes are: {oidScopes}")
     auth = _get_device_authenticator(client_id=stacClientId, scopes=oidScopes)
     if force_renew:
         refresh_token = None
@@ -193,8 +194,8 @@ def _get_valid_prefixes(auth_token):
 @click.option("--privateURL","private_url",type=str,   show_default = False, default = None, help="overwrite private Stac URL.  Warning expert OPTION! ")
 @click.option("--publicURL","public_url",type=str,   show_default = False, default = None, help="overwrite public Stac URL.  Warning expert OPTION! ")
 @click.option("--clientID", "client_id",type=str, default = stacClientId, help="overwrite clientID", hidden=True)
-@click.option("--scope", "scope",default = None, help="add scope", hidden=True, multiple=True)
-def stac(debug: bool = False, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None, scope:list=None):
+@click.option("--scope", "scope",type=str,default = None, help="add scope, seperate multiple with ','", hidden=True)
+def stac(debug: bool = False, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None, scope:str=None):
     """Command Line for terrabyte private STAC API"""
     global debugCli
     global goPublic
@@ -223,8 +224,9 @@ def stac(debug: bool = False, public: bool = False ,private_url:str = None, publ
         if debugCli: click.echo(f"Client ID is now {client_id}")
         stacClientId=client_id
     if scope:
-        if debugCli: click.echo(f"Adding Scope(s): {scope}")
-        oidScopes=scope
+        oidScopes=scope.split(",")
+        if debugCli: click.echo(f"Adding Scope(s): {oidScopes}")
+        #oidScopes=[scope]
     pass
 
 #define subcommands
