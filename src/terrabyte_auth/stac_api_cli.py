@@ -192,7 +192,7 @@ def _get_valid_prefixes(auth_token):
 @click.option("--debug",  is_flag = True, show_default = False, default = False, help="be more verbose", hidden=True)
 @click.option("--privateURL","private_url",type=str,   show_default = False, default = None, help="overwrite private Stac URL.  Warning expert OPTION! ")
 @click.option("--publicURL","public_url",type=str,   show_default = False, default = None, help="overwrite public Stac URL.  Warning expert OPTION! ")
-@click.option("--clientID", default = stacClientId, help="overwrite clientID", hidden=True)
+@click.option("--clientID", "client_id",default = stacClientId, help="overwrite clientID", hidden=True)
 def stac(debug: bool = False, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None):
     """Command Line for terrabyte private STAC API"""
     global debugCli
