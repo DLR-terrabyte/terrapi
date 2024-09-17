@@ -228,7 +228,7 @@ class RefreshTokenStore(PrivateJsonFile):
         logging.info(f"jwt decoded: {decoded}")
         try: 
             iat = datetime.fromtimestamp(decoded["exp"], timezone.utc)
-        except:
+        except Exception:
             logging.info(f"Failed to access exp Field in decoded refresh token. Decoded result was: {decoded} ")
         
         if iat < than:

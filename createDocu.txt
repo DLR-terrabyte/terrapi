@@ -1,0 +1,1 @@
+mdclick dumps --baseModule=terrabyte_auth.terrapi_cli --baseCommand=terrapi --docsPath=C:\Users\zeid_ju\VisualStudioCode\terrabyteDocu\website\docs\7_software\2000_tools\terrapi

@@ -3,13 +3,12 @@
 import logging
 import os
 import platform
-from configparser import ConfigParser
-from copy import deepcopy
+#from configparser import ConfigParser
 from pathlib import Path
-from typing import Any, Iterator, List, Optional, Sequence, Union
+#from typing import Any, Iterator, List, Optional, Sequence, Union
 
 
-DEFAULT_APP_NAME = "terrabyte_client"
+DEFAULT_APP_NAME = "terrabyte_auth"
 
 _log = logging.getLogger(__name__)
 

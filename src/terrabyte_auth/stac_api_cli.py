@@ -1,75 +1,69 @@
 import click
-import sys
 import json
 import ast
 import re
 import jwt
-from datetime import datetime, timezone, timedelta
 import traceback
 
-from typing import Optional, Union, List
+from typing import Optional, List
 import requests
-from urllib.parse import urlparse, urlunparse
 
-from .settings import TERRABYTE_AUTH_URL, TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID, TERRABYTE_PUBLIC_API_URL
+
+from .settings import  TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID, TERRABYTE_PUBLIC_API_URL
 
 from .auth.config import RefreshTokenStore
-from .auth.oidc import (
-    OidcDeviceAuthenticator,
-    AccessTokenResult,
-    OidcClientInfo,
-    OidcProviderInfo,
-)
 
 from .adapter import wrap_request
-
-stacClientId = TERRABYTE_CLIENT_ID
-privateStacUrl = TERRABYTE_PRIVATE_API_URL
-publicStacUrl = TERRABYTE_PUBLIC_API_URL
-debugCli = False
-goPublic = False
-tokenStore=RefreshTokenStore()
-#add additial scopes to request eg for slurm
-#oidScopes=["slurmrest"]
-oidScopes=None
-
-#if needed simple stac maipulation functions
-# https://github.com/EOEPCA/open-science-catalog-builder/blob/main/osc_builder/mystac.py 
-
-#helper funtions
-def _get_device_authenticator(client_id:str, scopes:List[str]=None)->OidcDeviceAuthenticator:
-    return OidcDeviceAuthenticator(
-                OidcClientInfo(
-                    client_id = client_id,
-                    provider = OidcProviderInfo(
-                        issuer = TERRABYTE_AUTH_URL,
-                        scopes = scopes
-                    ),
-                ),
-                use_pkce=True,
-            )
+from .shared_cli import login, auth, _get_auth_refresh_tokens
 
 
-def _get_issuer(url: str) ->str:
-    issuer = urlunparse(
-                urlparse(url)._replace(path="", query="", fragment="")
-            )
-    return issuer
+def _get_next_url(links)->str|None:
+    for link in links:
+        if link['rel']=='next':
+            return link
+    return None
 
-def _get_json_response_from_signed_request(stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
-    url=f"{privateStacUrl}/{stac_path}" 
-    if goPublic: url=f"{publicStacUrl}/{stac_path}"
-    if debugCli:  print(f" Requesting {error_desc} from {url} using {method}")
+def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
+    json_stac=_get_json_response_from_signed_request(stac_path, error_desc, method,alt_method,alt_code, **kwargs)
+    if(json_stac.get("type")=="FeatureCollection"):
+        nexUrl=_get_next_url(json_stac.get('links'))
+        while nexUrl:
+            extra_stac=_get_json_response_from_signed_url(ctx,nexUrl, error_desc, method,alt_method,alt_code, **kwargs)
+            nexUrl=_get_next_url(extra_stac.get('links'))
+            json_stac['features'].extent(extra_stac.get('features', None))
+            json_stac['context']['limit']+=extra_stac['context']['limit']
+        #remove next ling as we iterated over next links to download all items
+        json_stac['links']=[link for link in json_stac['links'] if link['rel']!='next']
+    return json_stac
+
+def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
+    url=f"{ctx.obj['privateStacUrl']}/{stac_path}" 
+    if ctx.obj['noAuth']: 
+        url=f"{ctx.obj['publicStacUrl']}/{stac_path}"
+    return(_get_json_response_from_signed_url(ctx,url, error_desc, method,alt_method,alt_code, **kwargs))
+
+
+
+def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, noAuth: bool=False,**kwargs)->dict:
+    debugCli =ctx.obj['DEBUG']
+    if debugCli:
+        print(f" Requesting {error_desc} from {url} using {method}")
     try:   
-        if goPublic: r = requests.request(url=url, method=method, **kwargs)
-        else:  r=wrap_request(requests.session(),url=url,client_id=stacClientId,method=method,**kwargs)      
+        if ctx.obj['noAuth']: 
+            r = requests.request(url=url, method=method, **kwargs)
+        else:  
+            r=wrap_request(requests.session(),url=url,client_id=ctx.obj['ClientId'],method=method,**kwargs)      
         #check if request was successful 
-        #toDO Dinstinquish errors for differnt codes
         # see https://github.com/stac-utils/stac-fastapi/blob/add05de82f745a717b674ada796db0e9f7153e27/stac_fastapi/api/stac_fastapi/api/errors.py#L23
+        # https://stac.terrabyte.lrz.de/public/api/api.html#/
         #fastAPI errors:
         if alt_method and r.status_code == alt_code :
-            if debugCli: click.echo(f"Request to {url} using {method} failed with error Code 409. Retrying with  {alt_method}",err=True)
-            r2=wrap_request(requests.session(),url=url,client_id=stacClientId,method=alt_method,**kwargs)
+            if debugCli:
+                click.echo(f"Request to {url} using {method} failed with error Code 409. Retrying with  {alt_method}",err=True)
+            if ctx.obj['noAuth']: 
+                r2= requests.request(url=url, method=alt_method, **kwargs)
+            else:  
+                r2=wrap_request(requests.session(),url=url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
             #if alt request was succesful switch to it
             if 200<=r2.status_code<=299:
                 r=r2
@@ -86,7 +80,8 @@ def _get_json_response_from_signed_request(stac_path:str, error_desc:str, method
             case 404:
                  code=json_stac.get('code', None)
                  click.echo(f"Stac API reported a ({r.status_code}) with {code} when calling {url}.", err=True)
-                 if debugCli: click.echo(f"Response was: {json_stac}")
+                 if debugCli: 
+                     click.echo(f"Response was: {json_stac}")
                  return None
             case 424:
                 
@@ -94,78 +89,56 @@ def _get_json_response_from_signed_request(stac_path:str, error_desc:str, method
                 return None
             case 500:
                 click.echo(f"Stac API reported an Internal Server Error ({r.status_code}) when calling {url}, Message: {message}", err=True)
-                click.echo(f" Please retry again in a few Minutes and please report the issue to the terrabyte supportdesk if it persists.", err=True)
+                click.echo(" Please retry again in a few Minutes and please report the issue to the terrabyte supportdesk if it persists.", err=True)
                 return None        
         r.raise_for_status()
-        #toDo maybe check size for 0?
-        json_stac=r.json()
         return json_stac
        
     except Exception as e:
         click.echo(f"Requesting {error_desc} from URL {url} failed")
         if debugCli:
-            click.echo(f"Error reported was:")
+            click.echo("Error reported was:")
             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
             traceback.print_exc()
         return None
 
-def _readJson_from_file_or_str(json_str:str = None, inputfile = None) ->dict:
+def _readJson_from_file_or_str(json_str:str = None, inputfile = None, debugCli=False) ->dict:
     if (inputfile is None and json_str is None) or (inputfile and json_str):
         click.echo("Error. Either JSON String or JSON File have to be specified. Exiting",err=True)
         exit(4)
         
     if inputfile: 
-        try: json_dict=json.loads(inputfile)
-        except:
+        try: 
+            json_dict=json.loads(inputfile.read())
+        except Exception as e:
            #fallback to also try reading it via ast?
            click.echo(f"Failed to import valid JSON from File {inputfile.name}. Exiting",err=True)
+           if debugCli:
+             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+             traceback.print_exc()  
            exit(5)
         return json_dict
     if json_str: 
         try:
             json_dict=json.loads(json_str)
             return json_dict
-        except Exception:
+        except Exception as e:
             try:
-                if debugCli: click.echo("json.loads failed. Falling back to ask convert", err=True)
+                if debugCli: 
+                    click.echo("json.loads failed. Falling back to ask convert", err=True)
+                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+                    traceback.print_exc()  
                 json_dict = ast.literal_eval(json_str)
-            except Exception:
+            except Exception as e:
                 click.echo(f"Failed to convert the String {json_str} to valid JSON. Exiting",err=True)
+                if debugCli:
+                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+                    traceback.print_exc()  
                 exit(5)
     #should never be reached
     return {}
 
-def _get_auth_refresh_tokens(noninteractive:bool=False, force_renew: bool =False):
-    stac_issuer = _get_issuer(privateStacUrl)
-    if debugCli: click.echo(f"Scopes are: {oidScopes}")
-    auth = _get_device_authenticator(client_id=stacClientId, scopes=oidScopes)
-    if force_renew:
-        refresh_token = None
-    else:
-        refresh_token = tokenStore.get_refresh_token_not_expired(issuer=stac_issuer, client_id=stacClientId)
-   
-    if refresh_token:
-        try:
-            if debugCli: click.echo(f"Trying to obtain Tokens with stored Refresh Token")
-            tokens = auth.get_tokens_from_refresh_token(refresh_token=refresh_token)
-            if debugCli: click.echo(f"successfully obtained valid Refresh Token")
-        except Exception as e:
-           if debugCli:
-             click.echo(f"Accessing Token with stored Refresh Token failed.")
-             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-           refresh_token=None
-           if noninteractive:
-               return None
-    if refresh_token == None:
-        try:
-            tokens = auth.get_tokens(True)
-            if debugCli: click.echo(f"Storing Refresh token to file.")
-            tokenStore.set_refresh_token(issuer=stac_issuer, client_id=stacClientId, refresh_token=tokens.refresh_token)
-        except Exception as e:
-            click.echo("Login to the 2FA terrabyte System failed. The Error returned was: " )
-            click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-            return None
-    return tokens
+
 
 def _get_valid_prefixes(auth_token):
     decoded = jwt.decode(auth_token, options={"verify_signature": False})
@@ -184,60 +157,66 @@ def _get_valid_prefixes(auth_token):
                         rw_prefix.append(g+".") 
         rw_prefix.sort()
         ro_prefix.sort()
-    if user_id: rw_prefix.insert(0, user_id+".")
+    if user_id:
+        rw_prefix.insert(0, user_id+".")
     return rw_prefix, ro_prefix
 
 
 @click.group()
 @click.option("-p", "--public",default=False, is_flag = True, show_default = False, help="Switch to public API")
-@click.option("--debug",  is_flag = True, show_default = False, default = False, help="be more verbose", hidden=True)
 @click.option("--privateURL","private_url",type=str,   show_default = False, default = None, help="overwrite private Stac URL.  Warning expert OPTION! ")
 @click.option("--publicURL","public_url",type=str,   show_default = False, default = None, help="overwrite public Stac URL.  Warning expert OPTION! ")
-@click.option("--clientID", "client_id",type=str, default = stacClientId, help="overwrite clientID", hidden=True)
+@click.option("--clientID", "client_id",type=str, default = None, help="overwrite clientID", hidden=True)
 @click.option("--scope", "scope",type=str,default = None, help="add scope, seperate multiple with ','", hidden=True)
-def stac(debug: bool = False, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None, scope:str=None):
+@click.pass_context
+def stac(ctx:dict, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None, scope:str=None):
     """Command Line for terrabyte private STAC API"""
-    global debugCli
-    global goPublic
-    global privateStacUrl
-    global publicStacUrl
-    global stacClientId
-    global oidScopes
-
-    if debug:
-        
-        debugCli=True
-        click.echo("Activating debug")
     if private_url:
-        privateStacUrl=private_url
-        if debugCli: click.echo(f"Api URl is now {privateStacUrl}")
-    
+        ctx.obj['privateStacUrl']=private_url
+        if ctx.obj['DEBUG']: 
+            click.echo(f"Api URl is now {private_url}")
+    else:
+        ctx.obj['privateStacUrl']=TERRABYTE_PRIVATE_API_URL
+
     if public_url:
-        publicStacUrl=public_url
-        goPublic=True
-        if debugCli: click.echo(f"Api URl is now {publicStacUrl}")
-    if public:
-        if debugCli: click.echo("Switching to public STAC API. Update/modify not possible")
-        goPublic=True
-        if debugCli: click.echo(f"Api URl is now {publicStacUrl}")
+        ctx.obj['publicStacUrl']=public_url
+        public=True
+        if ctx.obj['DEBUG']: 
+            click.echo(f"Api URl is now {public_url}")
+    else:
+        ctx.obj['publicStacUrl']=TERRABYTE_PUBLIC_API_URL
+    
+    ctx.obj['noAuth']=public
+    if public and ctx.obj['DEBUG']:
+        click.echo("Switching to public STAC API. Update/modify not possible")
+        click.echo(f"Api URl is now {ctx.obj['publicStacUrl']}")
+    
     if client_id:
-        if debugCli: click.echo(f"Client ID is now {client_id}")
-        stacClientId=client_id
+        if ctx.obj['DEBUG']: 
+            click.echo(f"Client ID is now {client_id}")
+        ctx.obj['ClientId']=client_id
+    else:
+        ctx.obj['ClientId']= TERRABYTE_CLIENT_ID
     if scope:
         oidScopes=scope.split(",")
-        if debugCli: click.echo(f"Adding Scope(s): {oidScopes}")
-        #oidScopes=[scope]
-    pass
+        if ctx.obj['DEBUG']: 
+            click.echo(f"Adding Scope(s): {oidScopes}")
+        ctx.obj['oidScopes']=[scope]
+    else:
+        ctx.obj['oidScopes']=None
+    ctx.obj['tokenStore']=RefreshTokenStore()
 
 #define subcommands
 @click.group()
-def collection():
+@click.pass_context
+def collection(ctx: dict):
     """ Interact with STAC Collection(s)"""
     #print("in Collection")
     pass
 
 @click.group()
-def item():
+@click.pass_context
+def item(ctx: dict):
     """ Interact with Stac Item(s)"""
     pass
 
@@ -247,10 +226,11 @@ def item():
 @click.option("-f","--filter",type=str, default="", help="Filter Collection ID with regex")
 @click.option("-t", "--title",default=False, is_flag = True, show_default = False, help="Add Title to output")
 @click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Add Description to output")
-def list(filter: str ="", title: bool = False, description: bool = False):
+@click.pass_context
+def list(ctx: dict,filter: str ="", title: bool = False, description: bool = False):
     """ List Collections"""
      
-    collections=_get_json_response_from_signed_request("collections", "Collections")['collections']
+    collections=_get_json_response_from_signed_request_paging("collections", "Collections")['collections']
         
     for collection in collections:
         if re.search(filter, collection['id']):
@@ -262,34 +242,64 @@ def list(filter: str ="", title: bool = False, description: bool = False):
                 click.echo("")
     
 @item.command("list")
-@click.option("-f","--filter",type=str, default="", help="Filter Item ID with regex")
-@click.option("-a", "--all",default=False, is_flag = True, show_default = False, help="Print whole Stac Item")
-@click.option("-p", "--pretty",default=False, is_flag = True, show_default = False, help="Indent")
+@click.option("-f","--filter", type=str, default="", help="Filter Expression as jw")
+@click.option("-a", "--all", default=False, is_flag = True, show_default = False, help="Print whole Stac Item")
+@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Item Printing")
+@click.option("-b", "--bbox",  nargs=4, default=None, type=float, help="Bounding Box for results: xmax, ymax, xmin, ymin Lon/Lat Coordinates")
+@click.option("-d", "--datetime", default=None, type=str, help="Time Range of results. E.g 2018-02-12T00:00:00Z/2018-03-18T12:31:12Z")
+@click.option("-l","--limit", default=None, type=int, help="Maximum Number of Items to request from API in one call")
+@click.option("-m","--max", default=None, type=int, help="Maximum Number of Items to receive in total")
+@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Print Description to output")
 #@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Add Description to output")
 @click.argument("collection_id", type=str)
-def list_item(collection_id:str, filter: str ="", all: bool = False, pretty: bool = False):
+@click.pass_context
+def list_item(ctx: dict,collection_id:str, filter: str ="", all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None):
     """ List Items in Collection """
-     
-    featureCollection=_get_json_response_from_signed_request(f"collections/{collection_id}/items", f"Items in Collection {collection_id}")
-    #['collections']
+    kwargs={}
+    params={}
+    if limit:
+        if max:
+            limit=min(limit,max)
+        params.update({'limit':limit})
+    if datetime:
+        params.update({'datetime':datetime})
+    if bbox:
+        params.update({'bbox':','.join(str(b) for b in bbox) })
+    if params:
+        kwargs.update({'params': params})
+
+
+    
+    featureCollection=_get_json_response_from_signed_request_paging(f"collections/{collection_id}/items", f"Items in Collection {collection_id}",maxElements=max, **kwargs)
+   #['collections']
    # click.echo(json.dumps(featureCollection['features'],indent=2))
     items=featureCollection.get('features')
     indent=0
-    if pretty: indent=2
+    if pretty: 
+        indent=2
     if items:
         for item in items:
             if re.search(filter, item['id']):
                 if all: 
                     click.echo(json.dumps(item,indent=indent))
-                else: click.echo(item['id'])
+                else: 
+                    click.echo(item['id'])
+
+
+
+
+#@collection.command()
+#def search():
+
 
 
 @collection.command()
 @click.argument("collection_id")
 @click.confirmation_option(help='Confirm deletion.', prompt='Are you sure you want to delete the Collection?')
-def delete(collection_id:str):
+@click.pass_context
+def delete(ctx: dict, collection_id:str):
     """ Delete a Collection defined by its ID"""
-    if goPublic:
+    if ctx.obj['noAuth']:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
     response=_get_json_response_from_signed_request(f"collections/{collection_id}" , f"deletion of {collection_id}", method="DELETE")
@@ -305,9 +315,10 @@ def delete(collection_id:str):
 @click.argument("collection_id")
 @click.argument("item_id")
 @click.confirmation_option(help='Confirm deletion.', prompt='Are you sure you want to delete the Item?')
-def delete_item(collection_id:str, item_id:str):
+@click.pass_context
+def delete_item(ctx: dict, collection_id:str, item_id:str):
     """ Delete an Item from Collection"""
-    if goPublic:
+    if ctx.obj['noAuth']:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
     response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"deletion of {collection_id}", method="DELETE")
@@ -328,9 +339,10 @@ def delete_item(collection_id:str, item_id:str):
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
-def create(id: str = None, json_str: str = None, inputfile = None,update: bool = False ):
+@click.pass_context
+def create(ctx: dict, id: str = None, json_str: str = None, inputfile = None,update: bool = False ):
     """Create a Collection from either String or File"""
-    if goPublic:
+    if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
        exit(3)
     collection=_readJson_from_file_or_str(json_str,inputfile)
@@ -343,7 +355,7 @@ def create(id: str = None, json_str: str = None, inputfile = None,update: bool =
     alt_code=409
     if update:
         alt_method = "PUT"
-    response=_get_json_response_from_signed_request(f"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=collection)
+    response=_get_json_response_from_signed_request("collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=collection)
     click.echo(json.dumps(response))
 
 @item.command("create")
@@ -351,10 +363,11 @@ def create(id: str = None, json_str: str = None, inputfile = None,update: bool =
 @click.option("--id","item_id",default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Collection JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
-#@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
-def create_item(collection_id:str,item_id: str = None, json_str: str = None, inputfile = None,update: bool = False ):
+@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
+@click.pass_context
+def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None,update: bool = False ):
     """Create a new Item in Collection from either String or File"""
-    if goPublic:
+    if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
        exit(3)
     item=_readJson_from_file_or_str(json_str,inputfile)
@@ -368,16 +381,18 @@ def create_item(collection_id:str,item_id: str = None, json_str: str = None, inp
     if update:
         alt_method = "PUT"
     response=_get_json_response_from_signed_request(f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
-    if response: click.echo(json.dumps(response))
+    if response: 
+        click.echo(json.dumps(response))
 
 
 @collection.command()
 @click.option("--id",default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Collection JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
-def update(id: str = None, json_str: str = None, inputfile = None):
+@click.pass_context
+def update(ctx: dict,id: str = None, json_str: str = None, inputfile = None):
     """Update an existing Collection from either String or File"""
-    if goPublic:
+    if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
        exit(3)
     collection=_readJson_from_file_or_str(json_str,inputfile)
@@ -386,17 +401,19 @@ def update(id: str = None, json_str: str = None, inputfile = None):
         collection['id']=id
     else:
         id=collection.get('id')
-    response=_get_json_response_from_signed_request(f"collections" , f"Update Collection {id}", method="PUT", json=collection)
-    if response: click.echo(json.dumps(response))
+    response=_get_json_response_from_signed_request("collections" , f"Update Collection {id}", method="PUT", json=collection)
+    if response: 
+        click.echo(json.dumps(response))
       
 @item.command("update")
 @click.argument("collection_id", type=str)
 @click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
-def update_item(collection_id:str,item_id: str = None, json_str: str = None, inputfile = None):
+@click.pass_context
+def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None):
     """Update an existing Item from either String or File"""
-    if goPublic:
+    if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
        exit(3)
     item=_readJson_from_file_or_str(json_str,inputfile)
@@ -409,7 +426,8 @@ def update_item(collection_id:str,item_id: str = None, json_str: str = None, inp
         click.echo(f"Error None Value in Collection Id ({collection_id}) or Item ID ({item_id})",err=True)
         exit(6)
     response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
-    if response: click.echo(json.dumps(response))
+    if response: 
+        click.echo(json.dumps(response))
       
 
 
@@ -419,7 +437,8 @@ def update_item(collection_id:str,item_id: str = None, json_str: str = None, inp
 @click.argument("collection_id", type=str)
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-f", "--file","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
-def get(collection_id:str,outfile, pretty:bool =False):
+@click.pass_context
+def get(ctx: dict,collection_id:str,outfile, pretty:bool =False):
     """ Get Metadata for single Collection from its ID"""
     collection=_get_json_response_from_signed_request(f"collections/{id}" , f"Collection {id}", method="GET")
     if pretty:
@@ -434,7 +453,8 @@ def get(collection_id:str,outfile, pretty:bool =False):
 @click.argument("item_id",type=str)
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-f", "--file","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
-def get_item(collection_id:str,item_id:str,outfile, pretty:bool =False):
+@click.pass_context
+def get_item(ctx: dict, collection_id:str, item_id:str, outfile, pretty:bool =False):
     """ Get Metadata for single Collection from Collection ID and Item ID"""
     collection=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
     if pretty:
@@ -444,73 +464,33 @@ def get_item(collection_id:str,item_id:str,outfile, pretty:bool =False):
     print("done")
 
 
-@stac.command()
-@click.option("-n", "--noninteractive",  is_flag=True, show_default=False, default=False,help="Fail if no valid Refresh Token stored")
-@click.option("-g", "--gdal",  is_flag=True, show_default=False, default=False,help="Add Options needed by gdal")
-@click.option("-c", "--curl",  is_flag=True, show_default=False, default=False,help="Add Options needed by curl")
-@click.option("-w", "--wget",  is_flag=True, show_default=False, default=False,help="Add Options needed by wget")
-def auth(wget:bool =False, gdal: bool = False, curl: bool = False, noninteractive:bool = False)->None:
-    """ Print the single use auth token needed to directly interact with the private STAC API"""
-    tokens = _get_auth_refresh_tokens(noninteractive)
-    if tokens:
-        if wget: 
-            print(f' --header="Authorization:  {tokens.access_token}" ')
-            return
-        if curl: 
-            print(f' -H "Authorization: Bearer {tokens.access_token}" ')
-            return
-        if gdal:
-            print(f'GDAL_HTTP_BEARER={tokens.access_token} ')
-            return
-        print(tokens.access_token)
-    else: exit(1)
-    
 
 
-@stac.command()
-@click.option("-f", "--force", is_flag=True, show_default=False, default=False, help="Force new login, even if valid Refresh Token stored" )
-@click.option("--valid", is_flag=True, type=bool,  show_default=False,default=False, help="Will print till when the Refresh token is valid.")
-@click.option( "--delete", is_flag=True, show_default=False, help="Delete existing Refresh Token. Will remove the Refresh token if it exists and then exit", default=False )
-@click.option("-d", "--days", type=int,  show_default=False,default=0,help="Min Nr of days the Token still has to be valid. Will refresh Token if it expires earlier")
-@click.option("-h", "--hours", type=int, show_default=False, default=0,help="Min Nr of hours the Token still has be valid. Will refresh Token if it expires earlier")
-@click.option("-t","--till", type=click.DateTime(), default=datetime.now(), help="Date the Refresh token has to be still be valid. Will refresh Token if it expires earlier")
-@click.option("--allowedPrefix","print_prefix", is_flag=True, show_default=False, help="Print list of readable/writable Collection Prefixes")
-def login(force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: Optional[datetime] =datetime.now(), valid: bool = False , print_prefix: bool=False):
-    """Interactively login via 2FA to obtain refresh Token for the STAC API. 
-    A Valid Refresh token is needed for all the other sub commands"""
-    #if debugCli: click.echo("Logging in")
-    stac_issuer=_get_issuer(privateStacUrl)
-    till = max(till, datetime.now()+timedelta(hours=hours, days=days)) 
-    if valid:
-        validity= tokenStore.get_expiry_date_refresh_token(stac_issuer, stacClientId)
-        if validity:
-            click.echo(f"Refresh Token valid till: {validity.astimezone()}")
-        else:
-            click.echo(f"No valid Refresh Token on file") 
-        return 
-    if delete:
-        if debugCli: click.echo("Deleting Refresh Token")
-        tokenStore.delete_refresh_token(stac_issuer, stacClientId)
-        return
-    tokens = _get_auth_refresh_tokens(force_renew=force)
+
+
+@collection.command()
+@click.pass_context
+def prefix(ctx:dict):
+    """ List all allowed read/writable prefixes for current user"""
+    tokens = _get_auth_refresh_tokens(ctx)
     if tokens is None:
         exit(1)
-    if(print_prefix): 
-        rw_prefix,ro_prefix = _get_valid_prefixes(tokens.access_token)
-        if rw_prefix:
-            click.echo("Writable Collection prefixes:")
-            for p in rw_prefix:
-                click.echo(p)
-        if ro_prefix:
-            click.echo("Readonly Collection prefixes:")
-            for p in ro_prefix:
-                 click.echo(p)
+    rw_prefix,ro_prefix = _get_valid_prefixes(tokens.access_token)
+    if rw_prefix:
+        click.echo("Writable Collection prefixes:")
+        for p in rw_prefix:
+            click.echo(p)
+    if ro_prefix:
+        click.echo("Readonly Collection prefixes:")
+        for p in ro_prefix:
+            click.echo(p)
 
 
-    
 
 stac.add_command(collection)
 stac.add_command(item)
+stac.add_command(login)
+stac.add_command(auth)
 
 if __name__ == '__main__':
     stac()
