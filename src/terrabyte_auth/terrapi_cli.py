@@ -1,5 +1,4 @@
 import click
-import sys
 from .stac_api_cli import  stac
 
 

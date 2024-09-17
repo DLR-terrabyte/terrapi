@@ -63,7 +63,8 @@ def _get_auth_refresh_tokens(ctx:dict, noninteractive:bool=False, force_renew: b
     if refresh_token is None:
         try:
             tokens = auth.get_tokens(True)
-            if debugCli: click.echo("Storing Refresh token to file.")
+            if debugCli:
+                click.echo("Storing Refresh token to file.")
             ctx.obj['tokenStore'].set_refresh_token(issuer=stac_issuer, client_id=ctx.obj['ClientId'], refresh_token=tokens.refresh_token)
         except Exception as e:
             click.echo("Login to the 2FA terrabyte System failed. The Error returned was: " )

@@ -4,8 +4,7 @@ import ast
 import re
 import jwt
 import traceback
-
-from typing import Optional, List
+#from typing import Optional, List
 import requests
 
 
