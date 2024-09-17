@@ -23,7 +23,7 @@ def _get_next_url(links)->str|None:
     return None
 
 def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
-    json_stac=_get_json_response_from_signed_request(stac_path, error_desc, method,alt_method,alt_code, **kwargs)
+    json_stac=_get_json_response_from_signed_request(ctx, stac_path, error_desc, method,alt_method,alt_code, **kwargs)
     if(json_stac.get("type")=="FeatureCollection"):
         nexUrl=_get_next_url(json_stac.get('links'))
         while nexUrl:
@@ -229,7 +229,7 @@ def item(ctx: dict):
 def list(ctx: dict,filter: str ="", title: bool = False, description: bool = False):
     """ List Collections"""
      
-    collections=_get_json_response_from_signed_request_paging("collections", "Collections")['collections']
+    collections=_get_json_response_from_signed_request_paging(ctx,"collections", "Collections")['collections']
         
     for collection in collections:
         if re.search(filter, collection['id']):
@@ -269,7 +269,7 @@ def list_item(ctx: dict,collection_id:str, filter: str ="", all: bool = False, p
 
 
     
-    featureCollection=_get_json_response_from_signed_request_paging(f"collections/{collection_id}/items", f"Items in Collection {collection_id}",maxElements=max, **kwargs)
+    featureCollection=_get_json_response_from_signed_request_paging(ctx,f"collections/{collection_id}/items", f"Items in Collection {collection_id}",maxElements=max, **kwargs)
    #['collections']
    # click.echo(json.dumps(featureCollection['features'],indent=2))
     items=featureCollection.get('features')
@@ -301,7 +301,7 @@ def delete(ctx: dict, collection_id:str):
     if ctx.obj['noAuth']:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
-    response=_get_json_response_from_signed_request(f"collections/{collection_id}" , f"deletion of {collection_id}", method="DELETE")
+    response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}" , f"deletion of {collection_id}", method="DELETE")
     if not response:
         click.echo(f"Failed to delete Collection {collection_id}")
     else :
@@ -320,7 +320,7 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
     if ctx.obj['noAuth']:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
-    response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"deletion of {collection_id}", method="DELETE")
+    response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"deletion of {collection_id}", method="DELETE")
     if not response:
         click.echo(f"Failed to delete Item {item_id} from {collection_id}")
     else :
@@ -354,7 +354,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile = None,upd
     alt_code=409
     if update:
         alt_method = "PUT"
-    response=_get_json_response_from_signed_request("collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=collection)
+    response=_get_json_response_from_signed_request(ctx,"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=collection)
     click.echo(json.dumps(response))
 
 @item.command("create")
@@ -379,7 +379,7 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     alt_code=409
     if update:
         alt_method = "PUT"
-    response=_get_json_response_from_signed_request(f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
+    response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
     if response: 
         click.echo(json.dumps(response))
 
@@ -400,7 +400,7 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile = None):
         collection['id']=id
     else:
         id=collection.get('id')
-    response=_get_json_response_from_signed_request("collections" , f"Update Collection {id}", method="PUT", json=collection)
+    response=_get_json_response_from_signed_request(ctx,"collections" , f"Update Collection {id}", method="PUT", json=collection)
     if response: 
         click.echo(json.dumps(response))
       
@@ -439,7 +439,7 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @click.pass_context
 def get(ctx: dict,collection_id:str,outfile, pretty:bool =False):
     """ Get Metadata for single Collection from its ID"""
-    collection=_get_json_response_from_signed_request(f"collections/{id}" , f"Collection {id}", method="GET")
+    collection=_get_json_response_from_signed_request(ctx,f"collections/{id}" , f"Collection {id}", method="GET")
     if pretty:
         outfile.write(json.dumps(collection, indent=2))
     else:
@@ -455,7 +455,7 @@ def get(ctx: dict,collection_id:str,outfile, pretty:bool =False):
 @click.pass_context
 def get_item(ctx: dict, collection_id:str, item_id:str, outfile, pretty:bool =False):
     """ Get Metadata for single Collection from Collection ID and Item ID"""
-    collection=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
+    collection=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
     if pretty:
         outfile.write(json.dumps(collection, indent=2))
     else:
