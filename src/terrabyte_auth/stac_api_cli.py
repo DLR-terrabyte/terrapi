@@ -4,7 +4,7 @@ import ast
 import re
 import jwt
 import traceback
-#from typing import Optional, List
+from typing import Optional, List, Tuple
 import requests
 
 
@@ -17,26 +17,35 @@ from .shared_cli import login, auth, _get_auth_refresh_tokens
 
 
 def _get_next_url(links)->str|None:
-    for link in links:
-        if link['rel']=='next':
-            return link
+    if links:
+        for link in links:
+            if link['rel']=='next':
+                return link['href']
     return None
 
-def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
+def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1,maxElements=None, **kwargs)->dict:
     json_stac=_get_json_response_from_signed_request(ctx, stac_path, error_desc, method,alt_method,alt_code, **kwargs)
-    if(json_stac.get("type")=="FeatureCollection"):
+    if json_stac and json_stac.get("type")=="FeatureCollection":
         nexUrl=_get_next_url(json_stac.get('links'))
         while nexUrl:
             extra_stac=_get_json_response_from_signed_url(ctx,nexUrl, error_desc, method,alt_method,alt_code, **kwargs)
-            nexUrl=_get_next_url(extra_stac.get('links'))
-            json_stac['features'].extent(extra_stac.get('features', None))
-            json_stac['context']['limit']+=extra_stac['context']['limit']
+            if extra_stac:
+                nexUrl=_get_next_url(extra_stac.get('links'))
+                if ctx.obj['DEBUG']:
+                    click.echo(f"nextURL is {nexUrl}")
+                json_stac['features'].extend(extra_stac.get('features', None))
+                json_stac['context']['limit']+=extra_stac['context']['limit']
+                if maxElements:
+                    if json_stac['context']['limit']>=maxElements:
+                        nexUrl=None
+            else:
+                nexUrl=None
         #remove next ling as we iterated over next links to download all items
         json_stac['links']=[link for link in json_stac['links'] if link['rel']!='next']
     return json_stac
 
 def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
-    url=f"{ctx.obj['privateStacUrl']}/{stac_path}" 
+    url=f"{ctx.obj['privateAPIUrl']}/{stac_path}" 
     if ctx.obj['noAuth']: 
         url=f"{ctx.obj['publicStacUrl']}/{stac_path}"
     return(_get_json_response_from_signed_url(ctx,url, error_desc, method,alt_method,alt_code, **kwargs))
@@ -138,6 +147,23 @@ def _readJson_from_file_or_str(json_str:str = None, inputfile = None, debugCli=F
     return {}
 
 
+def _filterItemStripHref(item:dict, href_only:bool=False, strip_file:bool=False, assetfilter:list=None)->Tuple[dict,list]:
+    assets=item.get('assets',[])
+    new_assets={}
+    hrefs=[]
+    for name,asset in assets.items():
+        if assetfilter and name not in assetfilter:
+            continue  
+        href=asset.get('href')
+        if strip_file and href:
+            href=href.replace("file://","",1)                       
+            asset['href']=href
+        hrefs.append(href)
+        new_assets.update({name:asset})
+    item.update({'assets':new_assets})
+    return item,hrefs
+
+
 
 def _get_valid_prefixes(auth_token):
     decoded = jwt.decode(auth_token, options={"verify_signature": False})
@@ -166,16 +192,16 @@ def _get_valid_prefixes(auth_token):
 @click.option("--privateURL","private_url",type=str,   show_default = False, default = None, help="overwrite private Stac URL.  Warning expert OPTION! ")
 @click.option("--publicURL","public_url",type=str,   show_default = False, default = None, help="overwrite public Stac URL.  Warning expert OPTION! ")
 @click.option("--clientID", "client_id",type=str, default = None, help="overwrite clientID", hidden=True)
-@click.option("--scope", "scope",type=str,default = None, help="add scope, seperate multiple with ','", hidden=True)
+#@click.option("--scope", "scope",type=str,default = None, help="add scope, seperate multiple with ','", hidden=True)
 @click.pass_context
 def stac(ctx:dict, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None, scope:str=None):
     """Command Line for terrabyte private STAC API"""
     if private_url:
-        ctx.obj['privateStacUrl']=private_url
+        ctx.obj['privateAPIUrl']=private_url
         if ctx.obj['DEBUG']: 
             click.echo(f"Api URl is now {private_url}")
     else:
-        ctx.obj['privateStacUrl']=TERRABYTE_PRIVATE_API_URL
+        ctx.obj['privateAPIUrl']=TERRABYTE_PRIVATE_API_URL
 
     if public_url:
         ctx.obj['publicStacUrl']=public_url
@@ -225,37 +251,57 @@ def item(ctx: dict):
 @click.option("-f","--filter",type=str, default="", help="Filter Collection ID with regex")
 @click.option("-t", "--title",default=False, is_flag = True, show_default = False, help="Add Title to output")
 @click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Add Description to output")
+@click.option("-a", "--all", default=False, is_flag = True, show_default = False, help="Write whole JSOn to output")
+@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Json Printing")
+@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Output to this file', default=click.get_text_stream('stdout'))
 @click.pass_context
-def list(ctx: dict,filter: str ="", title: bool = False, description: bool = False):
+def list(ctx: dict,outfile,filter: str ="", title: bool = False, description: bool = False,all:bool=False, pretty:bool=False):
     """ List Collections"""
-     
-    collections=_get_json_response_from_signed_request_paging(ctx,"collections", "Collections")['collections']
-        
-    for collection in collections:
-        if re.search(filter, collection['id']):
-            click.echo(collection['id'])
-            if title and 'title' in collection:
-                click.echo(f"title= '{collection['title']}'")
-            if description and 'description' in collection:
-                click.echo(f"description= '{collection['description']}'")
-                click.echo("")
+    indent=0
+    if pretty:
+        indent=2
+    collections=_get_json_response_from_signed_request_paging(ctx,"collections", "Collections")
+    if collections:
+        collections=collections.get('collections')
+    if collections:
+        if filter != "":
+            collections=[collection for collection in collections if re.search(filter, collection.get('id',""))]
+        if all:
+            outfile.write(json.dumps({'collections':collections},indent=indent))
+            outfile.write("\n")
+        else:          
+            for collection in collections:
+                outfile.write(f"{collection['id']}\n")
+                if title and 'title' in collection:
+                    outfile.write(f"title= '{collection['title']}'")
+                if description and 'description' in collection:
+                    outfile.write(f"description= '{collection['description']}'\n")
+                    outfile.write("\n")
     
 @item.command("list")
-@click.option("-f","--filter", type=str, default="", help="Filter Expression as jw")
-@click.option("-a", "--all", default=False, is_flag = True, show_default = False, help="Print whole Stac Item")
+#@click.option("-f","--filter", type=str, default="", help="Filter Expression as jw")
+@click.option( "--all", default=False, is_flag = True, show_default = False, help="Print whole Stac Item")
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Item Printing")
 @click.option("-b", "--bbox",  nargs=4, default=None, type=float, help="Bounding Box for results: xmax, ymax, xmin, ymin Lon/Lat Coordinates")
 @click.option("-d", "--datetime", default=None, type=str, help="Time Range of results. E.g 2018-02-12T00:00:00Z/2018-03-18T12:31:12Z")
 @click.option("-l","--limit", default=None, type=int, help="Maximum Number of Items to request from API in one call")
 @click.option("-m","--max", default=None, type=int, help="Maximum Number of Items to receive in total")
-@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Print Description to output")
-#@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Add Description to output")
+#@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Print Description to output")
+@click.option("-a","--assets", "assetfilter", default=None, type=str, show_default = False, help="Only Print specified assets, assets are separated by ',' ")
+@click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only Print asset hrefs")
+@click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
+@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Output to this file', default=click.get_text_stream('stdout'))
 @click.argument("collection_id", type=str)
 @click.pass_context
-def list_item(ctx: dict,collection_id:str, filter: str ="", all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None):
+def list_item(ctx: dict,collection_id:str,outfile, all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
     """ List Items in Collection """
+    if href_only and all:
+        click.echo("Warning options --all and --href-only make no sense together! Decide what you want! Everything or only the file links! Then come back and try again",err=True, color="Red")
+        exit(1)
     kwargs={}
     params={}
+    if max and not limit:
+        limit=max
     if limit:
         if max:
             limit=min(limit,max)
@@ -266,24 +312,34 @@ def list_item(ctx: dict,collection_id:str, filter: str ="", all: bool = False, p
         params.update({'bbox':','.join(str(b) for b in bbox) })
     if params:
         kwargs.update({'params': params})
-
-
+    if assetfilter:
+        assetfilter=assetfilter.split(",")
+    
     
     featureCollection=_get_json_response_from_signed_request_paging(ctx,f"collections/{collection_id}/items", f"Items in Collection {collection_id}",maxElements=max, **kwargs)
    #['collections']
    # click.echo(json.dumps(featureCollection['features'],indent=2))
-    items=featureCollection.get('features')
-    indent=0
-    if pretty: 
-        indent=2
-    if items:
-        for item in items:
-            if re.search(filter, item['id']):
-                if all: 
-                    click.echo(json.dumps(item,indent=indent))
-                else: 
-                    click.echo(item['id'])
-
+    if featureCollection:
+        items=featureCollection.get('features')
+        indent=2 if pretty else 0
+        if items:
+            new_items=[]
+            if max and len(items)> max:
+                items =items[:max]
+            for item in items:
+                if not (href_only or all):
+                    outfile.write(f"{item.get('id')}\n")
+                    continue
+                newitem,hrefs=_filterItemStripHref(item,href_only, strip_file, assetfilter)
+                if href_only:
+                    for href in hrefs:
+                        outfile.write(href)
+                        outfile.write("\n")
+                    continue
+                new_items.append(newitem)
+            if all:
+                outfile.write(json.dumps({'features':new_items},indent=indent))
+                outfile.write("\n")
 
 
 
@@ -351,11 +407,12 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile = None,upd
     else:
         id=collection.get('id')
     alt_method=None
-    alt_code=409
+
     if update:
         alt_method = "PUT"
-    response=_get_json_response_from_signed_request(ctx,"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=collection)
-    click.echo(json.dumps(response))
+    response=_get_json_response_from_signed_request(ctx,"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=409, json=collection)
+    if response:
+        click.echo(json.dumps(response))
 
 @item.command("create")
 @click.argument("collection_id", type=str)
@@ -363,8 +420,9 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile = None,upd
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
+@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
-def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None,update: bool = False ):
+def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None,update: bool = False, pretty:bool =False ):
     """Create a new Item in Collection from either String or File"""
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
@@ -380,16 +438,18 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     if update:
         alt_method = "PUT"
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
-    if response: 
-        click.echo(json.dumps(response))
+    if response:
+        indent=2 if pretty else 0
+        click.echo(json.dumps(response,indent))
 
 
 @collection.command()
 @click.option("--id",default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Collection JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
+@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
-def update(ctx: dict,id: str = None, json_str: str = None, inputfile = None):
+def update(ctx: dict,id: str = None, json_str: str = None, inputfile = None, pretty:bool =False):
     """Update an existing Collection from either String or File"""
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
@@ -400,17 +460,19 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile = None):
         collection['id']=id
     else:
         id=collection.get('id')
-    response=_get_json_response_from_signed_request(ctx,"collections" , f"Update Collection {id}", method="PUT", json=collection)
-    if response: 
-        click.echo(json.dumps(response))
+    response=_get_json_response_from_signed_request(ctx,f"collections/{id}" , f"Update Collection {id}", method="PUT", json=collection)
+    if response:
+        indent=2 if pretty else 0 
+        click.echo(json.dumps(response,indent=indent))
       
 @item.command("update")
 @click.argument("collection_id", type=str)
 @click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
+@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.pass_context
-def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None):
+def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None, pretty:bool =False):
     """Update an existing Item from either String or File"""
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
@@ -426,7 +488,8 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         exit(6)
     response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
     if response: 
-        click.echo(json.dumps(response))
+        indent=2 if pretty else 0 
+        click.echo(json.dumps(response,indent=indent))
       
 
 
@@ -435,32 +498,44 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @collection.command()
 @click.argument("collection_id", type=str)
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
-@click.option("-f", "--file","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
+@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
 @click.pass_context
 def get(ctx: dict,collection_id:str,outfile, pretty:bool =False):
     """ Get Metadata for single Collection from its ID"""
-    collection=_get_json_response_from_signed_request(ctx,f"collections/{id}" , f"Collection {id}", method="GET")
-    if pretty:
-        outfile.write(json.dumps(collection, indent=2))
-    else:
-        outfile.write(json.dumps(collection))
-    print("done")
+    collection=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}" , f"Collection {collection_id}", method="GET")
+    if collection:
+        indent=2 if pretty else 0 
+        outfile.write(json.dumps(collection,indent=indent))
+        outfile.write("\n")
+
 
 
 @item.command("get")
 @click.argument("collection_id", type=str)
 @click.argument("item_id",type=str)
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
-@click.option("-f", "--file","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
+@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
+@click.option("-a","--assets", "assetfilter", default=None, type=str, show_default = False, help="Only Print specified assets, assets are separated by ',' ")
+@click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only Print asset hrefs")
+@click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
 @click.pass_context
-def get_item(ctx: dict, collection_id:str, item_id:str, outfile, pretty:bool =False):
-    """ Get Metadata for single Collection from Collection ID and Item ID"""
-    collection=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
-    if pretty:
-        outfile.write(json.dumps(collection, indent=2))
-    else:
-        outfile.write(json.dumps(collection))
-    print("done")
+def get_item(ctx: dict, collection_id:str, item_id:str, outfile, pretty:bool =False,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
+    """ Get STAC Metadata for a single Item 
+    It requires the Collection ID and Item ID"""
+    item=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
+    if item:
+        indent=2 if pretty else 0 
+        if assetfilter:
+            assetfilter=assetfilter.split(",")
+        if assetfilter or href_only or strip_file:
+            item,hrefs=_filterItemStripHref(item,href_only,strip_file,assetfilter)
+        if href_only:
+            for href in hrefs:
+                 outfile.write(href)
+                 outfile.write("\n")
+        else:
+            outfile.write(json.dumps(item,indent=indent))
+            outfile.write("\n")
 
 
 

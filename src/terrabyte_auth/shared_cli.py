@@ -9,9 +9,6 @@ from urllib.parse import urlparse, urlunparse
 from typing import  List
 from datetime import datetime, timedelta
 
-
-
-
 #if needed simple stac maipulation functions
 # https://github.com/EOEPCA/open-science-catalog-builder/blob/main/osc_builder/mystac.py 
 
@@ -36,7 +33,7 @@ def _get_issuer(url: str) ->str:
     return issuer
 
 def _get_auth_refresh_tokens(ctx:dict, noninteractive:bool=False, force_renew: bool =False, notExpiredBefore=datetime.now()):
-    stac_issuer = _get_issuer(ctx.obj['privateStacUrl'])
+    stac_issuer = _get_issuer(ctx.obj['privateAPIUrl'])
     debugCli=ctx.obj['DEBUG']
     if debugCli: 
         click.echo(f"Scopes are: {ctx.obj['oidScopes']}")
@@ -49,7 +46,7 @@ def _get_auth_refresh_tokens(ctx:dict, noninteractive:bool=False, force_renew: b
     if refresh_token:
         try:
             if debugCli: 
-                click.echo("Trying to obtain Tokens with stored Refresh Token")
+                click.echo(f"Trying to obtain Tokens with stored Refresh Token for client_id={ctx.obj['ClientId']}")
             tokens = auth.get_tokens_from_refresh_token(refresh_token=refresh_token)
             if debugCli:
                 click.echo("successfully obtained valid Refresh Token")
@@ -109,13 +106,14 @@ def auth(ctx: dict, wget:bool =False, gdal: bool = False, curl: bool = False, no
 @click.option("-t","--till", type=click.DateTime(), default=None, help="Date the Refresh token has to be still be valid. Will refresh Token if it expires earlier")
 @click.pass_context
 def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: datetime = datetime.now() , valid: bool = False ):
-    """Interactively login via 2FA to obtain refresh Token for the API. 
+    """Interactively login via 2FA 
+    to obtain refresh Token for the API. 
     A Valid Refresh token is needed for all the other sub commands
     It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractive    
     """
     if ctx.obj['DEBUG']:
         click.echo(f"Till is: {till}")
-    stac_issuer=_get_issuer(ctx.obj['privateStacUrl'])
+    stac_issuer=_get_issuer(ctx.obj['privateAPIUrl'])
     validTill=datetime.now()+timedelta(hours=hours, days=days)
     if till:
          validTill = max(till,validTill ) 
