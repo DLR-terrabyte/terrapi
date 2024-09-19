@@ -4,9 +4,9 @@ from .shared_cli import login
 @click.group()
 @click.pass_context
 def restricted_data(ctx:dict):
-    """" Self Register to restricted Dataset. 
-         Get an overview of available datasets and their usage restrictions/requirements. 
-         Register to datasets by accepting the specific EULAs 
+    """ Self Register to restricted Dataset. 
+        Get an overview of available datasets and their usage restrictions/requirements. 
+        Request access to datasets by accepting the specific EULAs 
     """
     pass
 

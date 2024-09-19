@@ -1,1 +1,12 @@
-mdclick dumps --baseModule=terrabyte_auth.terrapi_cli --baseCommand=terrapi --docsPath=C:\Users\zeid_ju\VisualStudioCode\terrabyteDocu\website\docs\7_software\2000_tools\terrapi
+#!/bin/bash
+#latest md-click has a bug fixed by using branch from
+# git clone https://github.com/kid-116/md-click.git
+# cd md-click/
+# git checkout support-arguments
+# git pull
+# cat requirements.txt
+# pip install .
+
+
+
+mdclick dumps --baseModule=terrabyte_auth.terrapi_cli --baseCommand=terrapi --docsPath=docs

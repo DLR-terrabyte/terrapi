@@ -28,7 +28,7 @@ if __name__ == '__main__':
     terrabyte_auth.stac_api_cli.login.callback(valid=True)
     terrabyte_auth.stac_api_cli.login.callback()
     #terrabyte_auth.stac_api_cli.login.callback(valid=True)
-   # print("Test: Create Item")
+    # print("Test: Create Item")
     #terrabyte_auth.stac_api_cli.list_item.callback("di39rer.terrapi4")
     #print("Test: create Collection")
     #terrabyte_auth.stac_api_cli.create.callback()
