@@ -1,0 +1,21 @@
+# Micromamba environment file
+# https://marketplace.visualstudio.com/items?itemName=corker.vscode-micromamba
+
+name: default
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python>=3.10
+  - attrs>=23.2.0
+  - certifi>=2024.2.2
+  - charset-normalizer>=3.3.2
+  - idna>=3.7
+  - referencing>=0.35.1
+  - requests>=2.31.0
+  - six>1.16.0
+  - urllib3>=2.2.1
+  - click>=8.1.7
+  - pyjwt>=2.8.0
+
