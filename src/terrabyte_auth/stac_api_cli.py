@@ -4,13 +4,13 @@ import ast
 import re
 import jwt
 import traceback
-from typing import Optional, List, Tuple
+from typing import Tuple, TextIO
 import requests
 
 
-from .settings import  TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID, TERRABYTE_PUBLIC_API_URL
+from .settings import  TERRABYTE_PUBLIC_API_URL
 
-from .auth.config import RefreshTokenStore
+
 
 from .adapter import wrap_request
 from .shared_cli import login, auth, _get_auth_refresh_tokens
@@ -110,7 +110,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
             traceback.print_exc()
         return None
 
-def _readJson_from_file_or_str(json_str:str = None, inputfile = None, debugCli=False) ->dict:
+def _readJson_from_file_or_str(json_str:str = None, inputfile:TextIO = None, debugCli=False) ->dict:
     if (inputfile is None and json_str is None) or (inputfile and json_str):
         click.echo("Error. Either JSON String or JSON File have to be specified. Exiting",err=True)
         exit(4)
@@ -200,8 +200,6 @@ def stac(ctx:dict, public: bool = False ,private_url:str = None, public_url:str 
         ctx.obj['privateAPIUrl']=private_url
         if ctx.obj['DEBUG']: 
             click.echo(f"Api URl is now {private_url}")
-    else:
-        ctx.obj['privateAPIUrl']=TERRABYTE_PRIVATE_API_URL
 
     if public_url:
         ctx.obj['publicStacUrl']=public_url
@@ -220,16 +218,15 @@ def stac(ctx:dict, public: bool = False ,private_url:str = None, public_url:str 
         if ctx.obj['DEBUG']: 
             click.echo(f"Client ID is now {client_id}")
         ctx.obj['ClientId']=client_id
-    else:
-        ctx.obj['ClientId']= TERRABYTE_CLIENT_ID
+        
     if scope:
         oidScopes=scope.split(",")
         if ctx.obj['DEBUG']: 
             click.echo(f"Adding Scope(s): {oidScopes}")
         ctx.obj['oidScopes']=[scope]
-    else:
-        ctx.obj['oidScopes']=None
-    ctx.obj['tokenStore']=RefreshTokenStore()
+
+        
+    
 
 #define subcommands
 @click.group()
@@ -255,7 +252,7 @@ def item(ctx: dict):
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Json Printing")
 @click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Output to this file', default=click.get_text_stream('stdout'))
 @click.pass_context
-def list(ctx: dict,outfile,filter: str ="", title: bool = False, description: bool = False,all:bool=False, pretty:bool=False):
+def list(ctx: dict,outfile:TextIO,filter: str ="", title: bool = False, description: bool = False,all:bool=False, pretty:bool=False):
     """ List Collections"""
     indent=0
     if pretty:
@@ -293,7 +290,7 @@ def list(ctx: dict,outfile,filter: str ="", title: bool = False, description: bo
 @click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Output to this file', default=click.get_text_stream('stdout'))
 @click.argument("collection_id", type=str)
 @click.pass_context
-def list_item(ctx: dict,collection_id:str,outfile, all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
+def list_item(ctx: dict,collection_id:str,outfile:TextIO, all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
     """ List Items in Collection """
     if href_only and all:
         click.echo("Warning options --all and --href-only make no sense together! Decide what you want! Everything or only the file links! Then come back and try again",err=True, color="Red")
@@ -395,7 +392,7 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
 @click.pass_context
-def create(ctx: dict, id: str = None, json_str: str = None, inputfile = None,update: bool = False ):
+def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False )->None:
     """Create a Collection from either String or File"""
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
@@ -422,7 +419,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile = None,upd
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
-def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None,update: bool = False, pretty:bool =False ):
+def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False )->None:
     """Create a new Item in Collection from either String or File"""
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
@@ -449,7 +446,7 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
-def update(ctx: dict,id: str = None, json_str: str = None, inputfile = None, pretty:bool =False):
+def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
     """Update an existing Collection from either String or File"""
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
@@ -472,7 +469,7 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile = None, pre
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.pass_context
-def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile = None, pretty:bool =False):
+def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
     """Update an existing Item from either String or File"""
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
@@ -500,7 +497,7 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
 @click.pass_context
-def get(ctx: dict,collection_id:str,outfile, pretty:bool =False):
+def get(ctx: dict,collection_id:str,outfile:TextIO, pretty:bool =False):
     """ Get Metadata for single Collection from its ID"""
     collection=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}" , f"Collection {collection_id}", method="GET")
     if collection:
@@ -519,7 +516,7 @@ def get(ctx: dict,collection_id:str,outfile, pretty:bool =False):
 @click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only Print asset hrefs")
 @click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
 @click.pass_context
-def get_item(ctx: dict, collection_id:str, item_id:str, outfile, pretty:bool =False,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
+def get_item(ctx: dict, collection_id:str, item_id:str, outfile:TextIO, pretty:bool =False,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
     """ Get STAC Metadata for a single Item 
     It requires the Collection ID and Item ID"""
     item=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
