@@ -1,3 +1,6 @@
+# This file was originally copied from the repository 'https://github.com/Open-EO/openeo-python-client/blob/v0.28.0/openeo/util.py'
+# under the Apache License 2.0.
+
 """
 Various utilities and helpers.
 """

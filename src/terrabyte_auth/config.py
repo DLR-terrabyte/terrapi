@@ -1,4 +1,5 @@
-# copied from https://github.com/Open-EO/openeo-python-client/blob/master/openeo/config.py
+# This file was originally copied from the repository 'https://github.com/Open-EO/openeo-python-client/blob/master/openeo/config.py'
+# under the Apache License 2.0.
 
 import logging
 import os

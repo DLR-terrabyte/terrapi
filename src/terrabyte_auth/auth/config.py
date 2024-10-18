@@ -1,3 +1,6 @@
+# The functions within this file were originally copied from the repository 'https://github.com/Open-EO/openeo-python-client/blob/v0.28.0/openeo/rest/auth/config.py'
+# provided under the Apache License 2.0.
+
 """
 Functionality to store and retrieve authentication settings (usernames, passwords, client ids, ...)
 from local config files.

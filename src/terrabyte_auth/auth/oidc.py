@@ -1,3 +1,8 @@
+# The functions within this file were originally copied from the following repositories
+#   - 'https://github.com/Open-EO/openeo-python-client/blob/v0.28.0/openeo/rest/auth/oidc.py'
+#   - 'https://github.com/Open-EO/openeo-python-client/blob/v0.28.0/openeo/util.py'
+# provided under the Apache License 2.0.
+
 import json
 import base64
 import enum
