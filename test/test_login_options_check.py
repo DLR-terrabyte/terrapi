@@ -5,8 +5,8 @@ import ast
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/../src")
 import click
 from click.testing import CliRunner
-import terrapi.stac_api_cli 
-import terrapi.terrapi_cli
+import terrapi.cli.stac_api_cli 
+import terrapi.cli.terrapi_cli
 
 runner = CliRunner()
 
@@ -25,7 +25,7 @@ checkPrefix = False
 def stac_cmd(args:list ,out_str_assert:list =None):
     #print("running cmd ")
     runner = CliRunner()
-    result = runner.invoke(terrapi.stac_api_cli.stac, args)
+    result = runner.invoke(terrapi.cli.stac_api_cli.stac, args)
     #print("done")
     click.echo(result.stdout)
     click.echo("------")
@@ -38,7 +38,7 @@ def stac_cmd(args:list ,out_str_assert:list =None):
 
 def terrapi_cmd(args:list ,out_str_assert:list =None):
     runner = CliRunner()
-    result = runner.invoke(terrapi.terrapi_cli.terrapi , args)
+    result = runner.invoke(terrapi.cli.terrapi_cli.terrapi , args)
     click.echo(result.stdout)
     click.echo("------")
     click.echo("   ")
@@ -60,7 +60,7 @@ def modItem(i:int):
 
 
 
-#result = runner.invoke(terrapi.stac_api_cli.stacApiCli, ["auth','--help'])
+#result = runner.invoke(terrapi.cli.stac_api_cli.stacApiCli, ["auth','--help'])
 #click.echo(result.stdout)
 #click.echo("   ")
 #click.echo("   ")
