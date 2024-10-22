@@ -24,7 +24,7 @@ pip install git+https://github.com/DLR-terrabyte/terrapi.git
 
 ### Activate shell autocomplete
 
-If you are using the bash, fish or zsh shell you can activate bash autocomplete of the terrapi cli by running one of the following commands (or adding it to your shell startup file or venv postactivate file to activate by default)
+If you are using the bash, fish or zsh shell you can activate bash autocomplete of the terrapi cli by running one of the following commands (or adding it to your shell startup file or venv postactivate file to activate by default). If you are using bash shell and loading terrapi via the terrabyte modul system autocomplete is activated by default.
 
 **bash** (add to ~/.bashrc) :
 ```bash
