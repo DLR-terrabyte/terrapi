@@ -8,11 +8,11 @@ from typing import Tuple, TextIO
 import requests
 
 
-from .settings import  TERRABYTE_PUBLIC_API_URL
+from ..settings import  TERRABYTE_PUBLIC_API_URL
 
 
 
-from .adapter import wrap_request
+from ..adapter import wrap_request
 from .shared_cli import login, auth, _get_auth_refresh_tokens
 
 

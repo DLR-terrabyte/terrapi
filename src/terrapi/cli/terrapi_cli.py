@@ -1,8 +1,8 @@
 import click
 from .stac_api_cli import  stac
 from .restricted_access_cli import restricted_data
-from .settings import  TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID
-from .auth.config import RefreshTokenStore
+from ..settings import  TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID
+from ..auth.config import RefreshTokenStore
 
        
 @click.group()

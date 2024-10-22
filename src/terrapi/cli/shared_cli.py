@@ -1,10 +1,10 @@
 import click
-from .auth.oidc import (
+from .. auth.oidc import (
     OidcDeviceAuthenticator,
     OidcClientInfo,
     OidcProviderInfo,
 )
-from .settings import TERRABYTE_AUTH_URL
+from .. settings import TERRABYTE_AUTH_URL
 from urllib.parse import urlparse, urlunparse
 from typing import  List
 from datetime import datetime, timedelta
