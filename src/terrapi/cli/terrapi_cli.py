@@ -41,7 +41,7 @@ def slurm(ctx):
 
 terrapi.add_command(stac)
 #terrapi.add_command(slurm)
-terrapi.add_command(restricted_data)
+#terrapi.add_command(restricted_data)
 
 
 if __name__ == '__main__':
