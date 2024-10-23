@@ -1,6 +1,5 @@
 import click
 import json
-import ast
 import re
 import jwt
 import traceback
@@ -13,7 +12,7 @@ from ..settings import  TERRABYTE_PUBLIC_API_URL
 
 
 from ..adapter import wrap_request
-from .shared_cli import login, auth, _get_auth_refresh_tokens
+from .shared_cli import login, auth, _get_auth_refresh_tokens, _readJson_from_file_or_str
 
 
 def _get_next_url(links)->str|None:
@@ -60,7 +59,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         if ctx.obj['noAuth']: 
             r = requests.request(url=url, method=method, **kwargs)
         else:  
-            r=wrap_request(requests.session(),url=url,client_id=ctx.obj['ClientId'],method=method,**kwargs)      
+            r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method=method,**kwargs)      
         #check if request was successful 
         # see https://github.com/stac-utils/stac-fastapi/blob/add05de82f745a717b674ada796db0e9f7153e27/stac_fastapi/api/stac_fastapi/api/errors.py#L23
         # https://stac.terrabyte.lrz.de/public/api/api.html#/
@@ -72,7 +71,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
             if ctx.obj['noAuth']: 
                 r2= requests.request(url=url, method=alt_method, **kwargs)
             else:  
-                r2=wrap_request(requests.session(),url=url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
+                r2=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
             #if alt request was succesful switch to it
             if 200<=r2.status_code<=299:
                 r=r2
@@ -121,42 +120,6 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
             traceback.print_exc()
         return None
-
-def _readJson_from_file_or_str(json_str:str = None, inputfile:TextIO = None, debugCli=False) ->dict:
-    if (inputfile is None and json_str is None) or (inputfile and json_str):
-        click.echo("Error. Either JSON String or JSON File have to be specified. Exiting",err=True)
-        exit(4)
-        
-    if inputfile: 
-        try: 
-            json_dict=json.loads(inputfile.read())
-        except Exception as e:
-           #fallback to also try reading it via ast?
-           click.echo(f"Failed to import valid JSON from File {inputfile.name}. Exiting",err=True)
-           if debugCli:
-             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-             traceback.print_exc()  
-           exit(5)
-        return json_dict
-    if json_str: 
-        try:
-            json_dict=json.loads(json_str)
-            return json_dict
-        except Exception as e:
-            try:
-                if debugCli: 
-                    click.echo("json.loads failed. Falling back to ask convert", err=True)
-                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-                    traceback.print_exc()  
-                json_dict = ast.literal_eval(json_str)
-            except Exception as e:
-                click.echo(f"Failed to convert the String {json_str} to valid JSON. Exiting",err=True)
-                if debugCli:
-                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-                    traceback.print_exc()  
-                exit(5)
-    #should never be reached
-    return {}
 
 
 def _filterItemStripHref(item:dict, href_only:bool=False, strip_file:bool=False, assetfilter:list=None)->Tuple[dict,list]:
