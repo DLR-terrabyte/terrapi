@@ -26,67 +26,8 @@ def restricted_data(ctx:dict,local:bool, testing:bool):
 @restricted_data.command()
 @click.pass_context
 def list_available(ctx:dict):
-    """ List currently available restricted Datasets on terrabyte as well as your eligability """
-
-
-    url = f"{ctx.obj['privateAPIUrl']}/list-available-DSS"
-    response=None
-    containers=None
-    if ctx.obj['DEBUG']:
-        click.echo(f"Accessing {url} via GET")
-    try:   
-       r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
-       r.raise_for_status()
-       response=r.json()
-    except Exception as e:
-         click.echo(f"{e}")
-       # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-    if response:
-        if isinstance(response,dict):
-            containers=response.get("containers")
-        else:
-           containers=None  
-    if containers:
-        table_data = [["Name","ID", "status"]]
-        for container in containers:
-            line=[container['name'], container['id'], container['status']]
-            table_data.append(line )
-        table = AsciiTable(table_data)
-        click.echo(table.table)
-
-
-def get_container_info(ctx:dict,dataset:str)->dict:
-    url = f"{ctx.obj['privateAPIUrl']}/request/container/{dataset}"
-    if ctx.obj['DEBUG']:
-        click.echo(f"Accessing {url} via GET")
-    container=None
-    try:   
-        r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
-        if  r.status_code == 200:
-            response=r.json()
-            if isinstance(response,dict):
-                return response.get("container",None)
-            else:
-                click.echo(f"Response was : {response}") 
-                return response
-        match r.status_code:
-            case 404:
-               click.echo(f"Error requested container '{dataset}' does not exist. Exiting")
-               return container 
-            
-            case 403:
-               click.echo(f"Error reported by Backend: {r.json().get('detail')} Exiting")
-               return container
-            case 500:
-                click.echo("Error Backend reported an internal Server Error please try againg later and contact the terrabyte Helpdeskt at servicedesk@terrabyte.lrz.de if the error is ongoing")
-                return container
-        r.raise_for_status()
-       
-    except Exception as e:
-         click.echo(f"Uncaught Exception Occured: \n{e}")
-       # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-    return container
-
+    """ List currently available restricted Datasets on terrabyte"""
+    pass 
 
 @restricted_data.command()
 @click.argument('dataset')
