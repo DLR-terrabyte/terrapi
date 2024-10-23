@@ -59,6 +59,7 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  stac  Command Line for terrabyte private STAC API The private Stac Api...
+  restricted-data  Self Register to restricted Datasets on DSS.
+  stac             Command Line for terrabyte private STAC API The...
 ```
 
