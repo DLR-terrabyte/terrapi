@@ -6,8 +6,11 @@ from .. auth.oidc import (
 )
 from .. settings import TERRABYTE_AUTH_URL
 from urllib.parse import urlparse, urlunparse
-from typing import  List
+from typing import  List, TextIO
 from datetime import datetime, timedelta
+import ast
+import json
+import traceback
 
 #if needed simple stac maipulation functions
 # https://github.com/EOEPCA/open-science-catalog-builder/blob/main/osc_builder/mystac.py 
@@ -24,6 +27,42 @@ def _get_device_authenticator(client_id:str, scopes:List[str]=None)->OidcDeviceA
                 ),
                 use_pkce=True,
             )
+def _readJson_from_file_or_str(json_str:str = None, inputfile:TextIO = None, debugCli=False) ->dict:
+    if (inputfile is None and json_str is None) or (inputfile and json_str):
+        click.echo("Error. Either JSON String or JSON File have to be specified. Exiting",err=True)
+        exit(4)
+        
+    if inputfile: 
+        try: 
+            json_dict=json.loads(inputfile.read())
+        except Exception as e:
+           #fallback to also try reading it via ast?
+           click.echo(f"Failed to import valid JSON from File {inputfile.name}. Exiting",err=True)
+           if debugCli:
+             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+             traceback.print_exc()  
+           exit(5)
+        return json_dict
+    if json_str: 
+        try:
+            json_dict=json.loads(json_str)
+            return json_dict
+        except Exception as e:
+            try:
+                if debugCli: 
+                    click.echo("json.loads failed. Falling back to ask convert", err=True)
+                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+                    traceback.print_exc()  
+                json_dict = ast.literal_eval(json_str)
+            except Exception as e:
+                click.echo(f"Failed to convert the String {json_str} to valid JSON. Exiting",err=True)
+                if debugCli:
+                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+                    traceback.print_exc()  
+                exit(5)
+    #should never be reached
+    return {}
+
 
 
 def _get_issuer(url: str) ->str:
