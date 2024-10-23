@@ -10,7 +10,7 @@ cd $(dirname $0)
 
 #clean up to make sure there are no remnants
 rm docs/raw/*md
-mdclick dumps --baseModule=terrabyte_auth.terrapi_cli --baseCommand=terrapi --docsPath=docs/raw
+mdclick dumps --baseModule=terrapi.cli.terrapi_cli --baseCommand=terrapi --docsPath=docs/raw
 cd docs/raw
 
 #patch documenation that make issues in docusaurus

@@ -72,12 +72,17 @@ def _get_auth_refresh_tokens(ctx:dict, noninteractive:bool=False, force_renew: b
 
 @click.command()
 @click.option("-n", "--noninteractive",  is_flag=True, show_default=False, default=False,help="Fail if no valid Refresh Token stored")
-@click.option("-g", "--gdal",  is_flag=True, show_default=False, default=False,help="Add Options needed by gdal")
-@click.option("-c", "--curl",  is_flag=True, show_default=False, default=False,help="Add Options needed by curl")
-@click.option("-w", "--wget",  is_flag=True, show_default=False, default=False,help="Add Options needed by wget")
+@click.option("-g", "--gdal",  is_flag=True, show_default=False, default=False,help="Add Paramter needed by gdal")
+@click.option("-c", "--curl",  is_flag=True, show_default=False, default=False,help="Add Paramter needed by curl")
+@click.option("-w", "--wget",  is_flag=True, show_default=False, default=False,help="Add Paramter needed by wget")
 @click.pass_context
 def auth(ctx: dict, wget:bool =False, gdal: bool = False, curl: bool = False, noninteractive:bool = False)->None:
-    """ Print the single use auth token needed to directly interact with the private API"""
+    """ Print the single use auth token needed to directly interact with private terrapbyte APIs
+    
+    Optionally will add the parameters needed for utilities like curl or wget.
+    The returned Token is only valid for a few minutes. 
+    
+    """
     tokens = _get_auth_refresh_tokens(ctx,noninteractive)
     if tokens:
         if wget: 
@@ -99,17 +104,16 @@ def auth(ctx: dict, wget:bool =False, gdal: bool = False, curl: bool = False, no
 
 @click.command()
 @click.option("-f", "--force", is_flag=True, show_default=False, default=False, help="Force new login, discarding any existing tokens" )
-@click.option("-v", "--valid", is_flag=True, type=bool,  show_default=False,default=False, help="Will print till till when the Refresh token is valid.")
+@click.option("-v", "--valid", is_flag=True, type=bool,  show_default=False,default=False, help="Will print how long the current Refresh Token is valid.")
 @click.option( "--delete", is_flag=True, show_default=False, help="Delete existing Refresh Token. Will remove the Refresh token if it exists and then exit", default=False )
-@click.option("-d", "--days", type=int,  show_default=False,default=0,help="Min Nr of days the Token still has to be valid. Will refresh Token if it expires earlier")
-@click.option("-h", "--hours", type=int, show_default=False, default=0,help="Min Nr of hours the Token still has be valid. Will refresh Token if it expires earlier")
-@click.option("-t","--till", type=click.DateTime(), default=None, help="Date the Refresh token has to be still be valid. Will refresh Token if it expires earlier")
+@click.option("-d", "--days", type=int,  show_default=False,default=0,help="Min Nr of days the Token needs to be valid. Will refresh Token if it expires earlier")
+@click.option("-h", "--hours", type=int, show_default=False, default=0,help="Min Nr of hours the Token needs valid. Will refresh Token if it expires earlier")
+@click.option("-t","--till", type=click.DateTime(), default=None, help="Date the Refresh token needs be valid. Will refresh Token if it expires earlier")
 @click.pass_context
 def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: datetime = datetime.now() , valid: bool = False ):
-    """Interactively login via 2FA 
-    to obtain refresh Token for the API. 
+    """Interactively login via 2FA Browser redirect to obtain refresh Token for the API. 
     A Valid Refresh token is needed for all the other sub commands
-    It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractive    
+    It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractivly for multiple days   
     """
     if ctx.obj['DEBUG']:
         click.echo(f"Till is: {till}")

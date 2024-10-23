@@ -191,11 +191,16 @@ def _get_valid_prefixes(auth_token):
 @click.option("-p", "--public",default=False, is_flag = True, show_default = False, help="Switch to public API")
 @click.option("--privateURL","private_url",type=str,   show_default = False, default = None, help="overwrite private Stac URL.  Warning expert OPTION! ")
 @click.option("--publicURL","public_url",type=str,   show_default = False, default = None, help="overwrite public Stac URL.  Warning expert OPTION! ")
-@click.option("--clientID", "client_id",type=str, default = None, help="overwrite clientID", hidden=True)
+@click.option("--clientID", "client_id",type=str, default = None, help="overwrite clientID.  Warning expert OPTION!", hidden=True)
 #@click.option("--scope", "scope",type=str,default = None, help="add scope, seperate multiple with ','", hidden=True)
 @click.pass_context
 def stac(ctx:dict, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None, scope:str=None):
-    """Command Line for terrabyte private STAC API"""
+    """Command Line for terrabyte private STAC API
+    The private Stac Api allows you to create/update your own private or shared (between all users of a dss container) STAC Collections and Items
+    To mark a collection as private prepend the name of the collection with your LRZ username, e.g., something like "di99abc.Sentinel2Classification"
+    To mark a collection as shared prepend its name with DSS Container ID  like "pn56su-dss-0020" 
+    All write/readable prefixes can be obtained from the sub command prefix
+    """
     if private_url:
         ctx.obj['privateAPIUrl']=private_url
         if ctx.obj['DEBUG']: 
@@ -248,12 +253,14 @@ def item(ctx: dict):
 @click.option("-f","--filter",type=str, default="", help="Filter Collection ID with regex")
 @click.option("-t", "--title",default=False, is_flag = True, show_default = False, help="Add Title to output")
 @click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Add Description to output")
-@click.option("-a", "--all", default=False, is_flag = True, show_default = False, help="Write whole JSOn to output")
+@click.option("-a", "--all", default=False, is_flag = True, show_default = False, help="Write whole Collection JSOn to output")
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Json Printing")
-@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Output to this file', default=click.get_text_stream('stdout'))
+@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Collections to this file instead of stdout', default=click.get_text_stream('stdout'))
 @click.pass_context
 def list(ctx: dict,outfile:TextIO,filter: str ="", title: bool = False, description: bool = False,all:bool=False, pretty:bool=False):
-    """ List Collections"""
+    """ List STAC Collections
+    
+    Collections can be filtered by regular Expressions and written to File """
     indent=0
     if pretty:
         indent=2
@@ -277,21 +284,24 @@ def list(ctx: dict,outfile:TextIO,filter: str ="", title: bool = False, descript
     
 @item.command("list")
 #@click.option("-f","--filter", type=str, default="", help="Filter Expression as jw")
-@click.option( "--all", default=False, is_flag = True, show_default = False, help="Print whole Stac Item")
+@click.option( "--all", default=False, is_flag = True, show_default = False, help="Print whole STAC Item")
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Item Printing")
 @click.option("-b", "--bbox",  nargs=4, default=None, type=float, help="Bounding Box for results: xmax, ymax, xmin, ymin Lon/Lat Coordinates")
 @click.option("-d", "--datetime", default=None, type=str, help="Time Range of results. E.g 2018-02-12T00:00:00Z/2018-03-18T12:31:12Z")
 @click.option("-l","--limit", default=None, type=int, help="Maximum Number of Items to request from API in one call")
 @click.option("-m","--max", default=None, type=int, help="Maximum Number of Items to receive in total")
 #@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Print Description to output")
-@click.option("-a","--assets", "assetfilter", default=None, type=str, show_default = False, help="Only Print specified assets, assets are separated by ',' ")
-@click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only Print asset hrefs")
+@click.option("-a","--assets", "assetfilter", default=None, type=str, show_default = False, help="Only print specified assets, multiple assets are separated by ',' ")
+@click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only print asset hrefs")
 @click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
-@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Output to this file', default=click.get_text_stream('stdout'))
+@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Results to this file', default=click.get_text_stream('stdout'))
 @click.argument("collection_id", type=str)
 @click.pass_context
 def list_item(ctx: dict,collection_id:str,outfile:TextIO, all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
-    """ List Items in Collection """
+    """ List STAC Items in a specific Collection 
+    
+    The items can be filtered by time and space. It is also possible to specify spefic assets as well as only printing the path to the assets. 
+    """
     if href_only and all:
         click.echo("Warning options --all and --href-only make no sense together! Decide what you want! Everything or only the file links! Then come back and try again",err=True, color="Red")
         exit(1)
@@ -350,7 +360,10 @@ def list_item(ctx: dict,collection_id:str,outfile:TextIO, all: bool = False, pre
 @click.confirmation_option(help='Confirm deletion.', prompt='Are you sure you want to delete the Collection?')
 @click.pass_context
 def delete(ctx: dict, collection_id:str):
-    """ Delete a Collection defined by its ID"""
+    """ Delete a Collection defined by its ID
+    
+    This will permanently delete the specified collection with all its Items from the private STAC Catalogue. 
+    """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
@@ -369,7 +382,11 @@ def delete(ctx: dict, collection_id:str):
 @click.confirmation_option(help='Confirm deletion.', prompt='Are you sure you want to delete the Item?')
 @click.pass_context
 def delete_item(ctx: dict, collection_id:str, item_id:str):
-    """ Delete an Item from Collection"""
+    """ Delete an Item from Collection
+    
+    
+    This will permanently delete the specified Item from the STAC Catalogue
+    """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
        exit(3)
@@ -393,7 +410,10 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
 @click.pass_context
 def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False )->None:
-    """Create a Collection from either String or File"""
+    """Create a new STAC Collection 
+    
+    The Collection json can be specfied either from stdin, from a file or as string parameter. 
+    """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
        exit(3)
@@ -420,7 +440,10 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
 def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False )->None:
-    """Create a new Item in Collection from either String or File"""
+    """Create a new Item in specified Collection 
+    
+    The Item  json can be specfied either from stdin, from a file or as string parameter. 
+    """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
        exit(3)
@@ -447,7 +470,10 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
 def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
-    """Update an existing Collection from either String or File"""
+    """Update an existing Collection
+    
+    The Collection json can be specfied either from stdin, from a file or as string parameter. 
+    """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
        exit(3)
@@ -470,7 +496,10 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = No
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.pass_context
 def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
-    """Update an existing Item from either String or File"""
+    """Update an existing Item 
+    
+    The Item  json can be specfied either from stdin, from a file or as string parameter.
+    """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
        exit(3)
@@ -498,7 +527,10 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
 @click.pass_context
 def get(ctx: dict,collection_id:str,outfile:TextIO, pretty:bool =False):
-    """ Get Metadata for single Collection from its ID"""
+    """ Get STAC Metadata for a single Collection 
+    
+    It requires the Collection ID as an Argument
+    """
     collection=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}" , f"Collection {collection_id}", method="GET")
     if collection:
         indent=2 if pretty else 0 
