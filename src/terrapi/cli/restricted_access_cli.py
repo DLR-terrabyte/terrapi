@@ -108,6 +108,34 @@ def request_info(ctx:dict,dataset:str):
         click.echo(f"\nContainer Description: \n\n {container['description']}")
         
 
+@restricted_data.command()
+@click.argument('dataset')
+@click.pass_context
+def container_info(ctx:dict,dataset:str):
+    """ Interactively request access to specific dataset on terrabyte DSS by accepting its EULAs 
+        Dataset can be specfied either by its ID or its name
+    """
+    url = f"{ctx.obj['privateAPIUrl']}/request/container/{dataset}"
+    response=None
+    container=None
+    try:   
+       r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
+       r.raise_for_status()
+       response=r.json()
+    except Exception as e:
+         click.echo(f"{e}")
+       # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+    if response:
+        container=response.get("container")
+        click.echo(f"Container Name:       {container["name"]}")
+        click.echo(f"Container ID:         {container["id"]}")
+        click.echo(f"Container Documents:  {container["hrefs"]}")
+        for href in container["hrefs"]:
+            click.echo(f"                      {href}")
+            #click.launch(href)
+        click.echo(f"Container Description: \n {container["description"]}")
+        
+
 
 restricted_data.add_command(login)
 restricted_data.add_command(auth)
