@@ -199,7 +199,8 @@ def stac(ctx:dict, public: bool = False ,private_url:str = None, public_url:str 
     The private Stac Api allows you to create/update your own private or shared (between all users of a dss container) STAC Collections and Items
     To mark a collection as private prepend the name of the collection with your LRZ username, e.g., something like "di99abc.Sentinel2Classification"
     To mark a collection as shared prepend its name with DSS Container ID  like "pn56su-dss-0020" 
-    All write/readable prefixes can be obtained from the sub command prefix
+    All write/readable prefixes can be obtained from the sub command prefix.
+    The public flag allows the read-only usage of terrapi for the currated public STAC API 
     """
     if private_url:
         ctx.obj['privateAPIUrl']=private_url
@@ -300,7 +301,9 @@ def list(ctx: dict,outfile:TextIO,filter: str ="", title: bool = False, descript
 def list_item(ctx: dict,collection_id:str,outfile:TextIO, all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
     """ List STAC Items in a specific Collection 
     
-    The items can be filtered by time and space. It is also possible to specify spefic assets as well as only printing the path to the assets. 
+    The items can be filtered by time and space.
+      It is also possible to specify spefic assets as well as only printing the path to the assets. 
+      This allows the creation of a file list for processing in not stac aware applications 
     """
     if href_only and all:
         click.echo("Warning options --all and --href-only make no sense together! Decide what you want! Everything or only the file links! Then come back and try again",err=True, color="Red")
@@ -385,7 +388,7 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
     """ Delete an Item from Collection
     
     
-    This will permanently delete the specified Item from the STAC Catalogue
+    This will permanently delete the specified Item from the STAC Catalogue. 
     """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
@@ -412,7 +415,7 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
 def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False )->None:
     """Create a new STAC Collection 
     
-    The Collection json can be specfied either from stdin, from a file or as string parameter. 
+    The Collection json can be specfied either from stdin, from a file or as a parameter. 
     """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
@@ -442,7 +445,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False )->None:
     """Create a new Item in specified Collection 
     
-    The Item  json can be specfied either from stdin, from a file or as string parameter. 
+    The Item  json can be specfied either from stdin, from a file or as a parameter. 
     """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
@@ -472,7 +475,7 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
     """Update an existing Collection
     
-    The Collection json can be specfied either from stdin, from a file or as string parameter. 
+    The Collection json can be specfied either from stdin, from a file or as a parameter. 
     """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
@@ -498,7 +501,7 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = No
 def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
     """Update an existing Item 
     
-    The Item  json can be specfied either from stdin, from a file or as string parameter.
+    The Item  json can be specfied either from stdin, from a file or as a parameter.
     """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
@@ -550,7 +553,12 @@ def get(ctx: dict,collection_id:str,outfile:TextIO, pretty:bool =False):
 @click.pass_context
 def get_item(ctx: dict, collection_id:str, item_id:str, outfile:TextIO, pretty:bool =False,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
     """ Get STAC Metadata for a single Item 
-    It requires the Collection ID and Item ID"""
+
+    It requires the Collection ID and Item ID.
+    Via the "assets" and "href-only" options it is possible to access the direct dss file path of the item
+    
+    
+    """
     item=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
     if item:
         indent=2 if pretty else 0 
@@ -574,7 +582,11 @@ def get_item(ctx: dict, collection_id:str, item_id:str, outfile:TextIO, pretty:b
 @collection.command()
 @click.pass_context
 def prefix(ctx:dict):
-    """ List all allowed read/writable prefixes for current user"""
+    """ List all acceptable read/writable prefixes for specific user
+    
+    The information about the prefixes is extracted from the current refresh token. 
+    Therefore if a new dss invite was accepted lately it is recommended to force the update of the token via the login function.   
+    """
     tokens = _get_auth_refresh_tokens(ctx)
     if tokens is None:
         exit(1)

@@ -1,3 +1,8 @@
+---
+id: delete
+title: delete
+description: terrapi command line library documentation - slurm subcommand
+---
 
 # item delete
 

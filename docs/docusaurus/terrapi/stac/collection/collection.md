@@ -1,3 +1,8 @@
+---
+id: collection
+title: collection
+description: terrapi command line library documentation - slurm subcommand
+---
 
 # stac collection
 

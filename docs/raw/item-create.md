@@ -3,7 +3,7 @@
 
 Create a new Item in specified Collection 
     
-    The Item  json can be specfied either from stdin, from a file or as string parameter. 
+    The Item  json can be specfied either from stdin, from a file or as a parameter. 
     
 
 ## Usage
@@ -87,7 +87,7 @@ Usage: terrapi stac item create [OPTIONS] COLLECTION_ID
 
   Create a new Item in specified Collection
 
-  The Item  json can be specfied either from stdin, from a file or as string
+  The Item  json can be specfied either from stdin, from a file or as a
   parameter.
 
 Options:

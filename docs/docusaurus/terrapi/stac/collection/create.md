@@ -1,3 +1,8 @@
+---
+id: create
+title: create
+description: terrapi command line library documentation - slurm subcommand
+---
 
 # collection create
 

@@ -1,3 +1,8 @@
+---
+id: get
+title: get
+description: terrapi command line library documentation - slurm subcommand
+---
 
 # item get
 

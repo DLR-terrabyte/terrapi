@@ -1,7 +1,12 @@
+---
+id: update
+title: update
+description: terrapi command line library documentation - slurm subcommand
+---
 
-# collection create
+# collection update
 
-Create a new STAC Collection 
+Update an existing Collection
     
     The Collection json can be specfied either from stdin, from a file or as a parameter. 
     
@@ -9,7 +14,7 @@ Create a new STAC Collection
 ## Usage
 
 ```
-Usage: terrapi stac collection create [OPTIONS]
+Usage: terrapi stac collection update [OPTIONS]
 ```
 
 ## Arguments
@@ -46,13 +51,13 @@ Usage: terrapi stac collection create [OPTIONS]
 
 
 
-* `update`:
+* `pretty`:
     * Type: BOOL
     * Default: `False`
-    * Usage: `-u
---update`
+    * Usage: `-p
+--pretty`
 
-    Update Collection if it allready exists
+    print pretty readable json
 
 
 
@@ -68,9 +73,9 @@ Usage: terrapi stac collection create [OPTIONS]
 ## CLI Help
 
 ```
-Usage: terrapi stac collection create [OPTIONS]
+Usage: terrapi stac collection update [OPTIONS]
 
-  Create a new STAC Collection
+  Update an existing Collection
 
   The Collection json can be specfied either from stdin, from a file or as a
   parameter.
@@ -81,7 +86,7 @@ Options:
   -j, --json TEXT      Provide collection as JSON String
   -f, --file FILENAME  Read Collection JSON from File. Specify - to read from
                        pipe
-  -u, --update         Update Collection if it allready exists
+  -p, --pretty         print pretty readable json
   --help               Show this message and exit.
 ```
 

@@ -1,23 +1,33 @@
+---
+id: create
+title: create
+description: terrapi command line library documentation - slurm subcommand
+---
 
-# collection create
+# item create
 
-Create a new STAC Collection 
+Create a new Item in specified Collection 
     
-    The Collection json can be specfied either from stdin, from a file or as a parameter. 
+    The Item  json can be specfied either from stdin, from a file or as a parameter. 
     
 
 ## Usage
 
 ```
-Usage: terrapi stac collection create [OPTIONS]
+Usage: terrapi stac item create [OPTIONS] COLLECTION_ID
 ```
 
 ## Arguments
 
+* `collection_id` (REQUIRED):
+    * Type: STRING
+    * Default: `None`
+    * Usage: `collection_id`
+
 
 ## Options
 
-* `id`:
+* `item_id`:
     * Type: STRING
     * Default: `None`
     * Usage: `--id`
@@ -56,6 +66,16 @@ Usage: terrapi stac collection create [OPTIONS]
 
 
 
+* `pretty`:
+    * Type: BOOL
+    * Default: `False`
+    * Usage: `-p
+--pretty`
+
+    print pretty readable json
+
+
+
 * `help`:
     * Type: BOOL
     * Default: `False`
@@ -68,11 +88,11 @@ Usage: terrapi stac collection create [OPTIONS]
 ## CLI Help
 
 ```
-Usage: terrapi stac collection create [OPTIONS]
+Usage: terrapi stac item create [OPTIONS] COLLECTION_ID
 
-  Create a new STAC Collection
+  Create a new Item in specified Collection
 
-  The Collection json can be specfied either from stdin, from a file or as a
+  The Item  json can be specfied either from stdin, from a file or as a
   parameter.
 
 Options:
@@ -82,6 +102,7 @@ Options:
   -f, --file FILENAME  Read Collection JSON from File. Specify - to read from
                        pipe
   -u, --update         Update Collection if it allready exists
+  -p, --pretty         print pretty readable json
   --help               Show this message and exit.
 ```
 

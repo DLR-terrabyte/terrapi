@@ -1,3 +1,8 @@
+---
+id: update
+title: update
+description: terrapi command line library documentation - slurm subcommand
+---
 
 # item update
 

@@ -3,7 +3,7 @@
 
 Update an existing Collection
     
-    The Collection json can be specfied either from stdin, from a file or as string parameter. 
+    The Collection json can be specfied either from stdin, from a file or as a parameter. 
     
 
 ## Usage
@@ -72,8 +72,8 @@ Usage: terrapi stac collection update [OPTIONS]
 
   Update an existing Collection
 
-  The Collection json can be specfied either from stdin, from a file or as
-  string parameter.
+  The Collection json can be specfied either from stdin, from a file or as a
+  parameter.
 
 Options:
   --id TEXT            ID of the Collection. If specified will overwrite the
