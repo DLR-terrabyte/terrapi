@@ -19,7 +19,7 @@ Aferwards the terrapi cli command is active in your shell.
 ### Manual installation
 
 ```bash
-pip install git+https://github.com/DLR-terrabyte/terrapi.git
+pip install git+https://github.com/DLR-terrabyte/terrapi.git@latest-release
 ```
 
 ### Activate shell autocomplete
