@@ -566,9 +566,7 @@ def get(ctx: dict,collection_id:str,outfile:TextIO, pretty:bool =False):
 @click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
 @click.pass_context
 def get_item(ctx: dict, collection_id:str, item_id:str, outfile:TextIO, pretty:bool =False,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
-    """ Get STAC Metadata for a single Item 
-
-    It requires the Collection ID and Item ID.
+    """ Get STAC Metadata for a single Item git 
     Via the "assets" and "href-only" options it is possible to access the direct dss file path of the item
     
     
