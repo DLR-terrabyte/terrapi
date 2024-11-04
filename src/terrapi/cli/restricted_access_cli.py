@@ -170,29 +170,19 @@ def request_info(ctx:dict,dataset:str):
 @restricted_data.command()
 @click.argument('dataset')
 @click.pass_context
-def container_info(ctx:dict,dataset:str):
-    """ Interactively request access to specific dataset on terrabyte DSS by accepting its EULAs 
+def request_info(ctx:dict,dataset:str):
+    """ Get detailed Description of a dataset container
         Dataset can be specfied either by its ID or its name
-    """
-    url = f"{ctx.obj['privateAPIUrl']}/request/container/{dataset}"
-    response=None
-    container=None
-    try:   
-       r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
-       r.raise_for_status()
-       response=r.json()
-    except Exception as e:
-         click.echo(f"{e}")
-       # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-    if response:
-        container=response.get("container")
+    """ 
+    container=get_container_info(ctx,dataset)
+    if container:
         click.echo(f"Container Name:       {container["name"]}")
-        click.echo(f"Container ID:         {container["id"]}")
-        click.echo(f"Container Documents:  {container["hrefs"]}")
+        click.echo(f"Container DSS ID:     {container["id"]}")
+        click.echo("Container Documents:")
         for href in container["hrefs"]:
-            click.echo(f"                      {href}")
+            click.echo(f"{href}")
             #click.launch(href)
-        click.echo(f"Container Description: \n {container["description"]}")
+        click.echo(f"\nContainer Description: \n\n {container["description"]}")
         
 
 
