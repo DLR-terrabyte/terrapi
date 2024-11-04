@@ -238,6 +238,80 @@ def container_info(ctx:dict,dataset:str):
         click.echo(f"Container Description: \n {container["description"]}")
         
 
+@restricted_data.command()
+@click.argument('dataset')
+@click.pass_context
+def request_access(ctx:dict,dataset:str)->None:
+    """ Interactively request access to specific dataset on terrabyte DSS by accepting its EULAs 
+        Dataset can be provided by its ID or name
+        Some datasets might be restriced to DLR Employees
+    """
+    accessurl = f"{ctx.obj['privateAPIUrl']}/request/access/{dataset}"
+    container=get_container_info(ctx,dataset)
+    if not container:
+        return
+    status=container.get("status","")
+    if status =="registered":
+        click.echo(f"You allready have access to the container {container["name"]} and its dss {container["id"]}. What more do you need ;-)")
+        return
+    if status =="not-allowed":
+        click.echo(f"Unfortunatly your Account is not eligable for the container {container["name"]}.")
+        return
+    if status =="available":
+        click.echo(f"You are requesting access to the DSS Container {container["name"]}.")
+        click.echo("Please read the following Description and the specfied Documents thoroughly")
+        click.echo(" ")
+        click.echo(f"Container Name:       {container["name"]}")
+        click.echo(f"Container DSS ID:     {container["id"]}")
+        click.echo("Container Documents:")
+        for href in container["hrefs"]:
+            click.echo(f"{href}")
+            #click.launch(href)
+        click.echo(f"\nContainer Description: \n\n {container["description"]}")
+        click.echo("####################################################\n") 
+        eulaAccept=click.confirm(f"Do you confirm that you have read the Licence Agreement of the container {container["name"]} and that you accept the stated terms and contitions?", default=False, show_default =False)
+        if not eulaAccept:
+            click.echo("As you have not accepted the Licence Agreement, we can not request access. Sorry")
+            return
+    
+    click.echo("")
+    click.echo(f"Eula accepted, Requesting access to container {container["name"]}")
+    success=None
+    try:   
+        r=wrap_request(requests.sessions.Session(),url=f"{accessurl}?eulaAccept={eulaAccept}",client_id=ctx.obj['ClientId'],method="POST")
+        if r.status_code>=200 and r.status_code<299:
+           response=r.json()
+           success=response.get("status",None)
+        else:
+           click.echo(f"Error we received Code {r.status_code} from the Backend reporting: {r.json().get('detail',r.json())} ")
+           
+    except Exception as e:
+         click.echo(f"Unhandled Exception {e}")
+    if success:
+        click.echo(f"Status of access request was: {success}")
+
+        
+
+
+
+@restricted_data.command()
+@click.argument('dataset')
+@click.pass_context
+def request_info(ctx:dict,dataset:str):
+    """ Get detailed Description of a dataset container
+        Dataset can be specfied either by its ID or its name
+    """ 
+    container=get_container_info(ctx,dataset)
+    if container:
+        click.echo(f"Container Name:       {container["name"]}")
+        click.echo(f"Container DSS ID:     {container["id"]}")
+        click.echo("Container Documents:")
+        for href in container["hrefs"]:
+            click.echo(f"{href}")
+            #click.launch(href)
+        click.echo(f"\nContainer Description: \n\n {container["description"]}")
+        
+
 
 restricted_data.add_command(login)
 #restricted_data.add_command(auth)
