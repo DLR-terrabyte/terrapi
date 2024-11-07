@@ -8,7 +8,7 @@ from terminaltables import AsciiTable
 
 @click.group()
 @click.pass_context
-@click.Option("-l", "local", help="Development Option to talk to backend locally (port 8000) ", default=False,type=bool)
+@click.option("-l", "local", help="Development Option to talk to backend locally (port 8000) ", default=False,type=bool, is_flag=True)
 def restricted_data(ctx:dict,local:bool):
     """ Self Register to restricted Datasets on DSS. 
         This tool allows you to get an overview of currently available restricted datasets, your current access status and their usage restrictions/requirements. 
@@ -17,8 +17,8 @@ def restricted_data(ctx:dict,local:bool):
 
     ctx.obj['privateAPIUrl'] = TERRABYTE_RESTRICTED_DATA_API_URL
     if local:
+        click.echo("Switching to local backend")
         ctx.obj['privateAPIUrl'] = "http://127.0.0.1:8000"
-    pass
 
 @restricted_data.command()
 @click.pass_context
@@ -38,7 +38,10 @@ def list_available(ctx:dict):
          click.echo(f"{e}")
        # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
     if response:
-        containers=response.get("containers")
+        if isinstance(response,dict):
+            containers=response.get("containers")
+        else:
+           containers=None  
     if containers:
         table_data = [["Name","ID", "status"]]
         for container in containers:
@@ -52,11 +55,15 @@ def get_container_info(ctx:dict,dataset:str)->dict:
     url = f"{ctx.obj['privateAPIUrl']}/request/container/{dataset}"
     container=None
     try:   
-       r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
-       if  r.status_code ==200:
-           response=r.json()
-           return response.get("container",None)
-       match r.status_code:
+        r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
+        if  r.status_code == 200:
+            response=r.json()
+            if isinstance(response,dict):
+                return response.get("container",None)
+            else:
+                click.echo(f"Response was : {response}") 
+                return response
+        match r.status_code:
             case 404:
                click.echo(f"Error requested container '{dataset}' does not exist. Exiting")
                return container 
@@ -64,11 +71,13 @@ def get_container_info(ctx:dict,dataset:str)->dict:
             case 403:
                click.echo(f"Error reported by Backend: {r.json().get('detail')} Exiting")
                return container
-       r.raise_for_status()
+            case 500:
+                click.echo("Error Backend reported an internal Server Error please try againg later and contact the terrabyte Helpdeskt at servicedesk@terrabyte.lrz.de if the error is ongoing")
+                return container
+        r.raise_for_status()
        
-    
     except Exception as e:
-         click.echo(f"{e}")
+         click.echo(f"Uncaught Exception Occured: \n{e}")
        # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
     return container
 
@@ -114,12 +123,15 @@ def request_access(ctx:dict,dataset:str)->None:
     success=None
     try:   
         r=wrap_request(requests.sessions.Session(),url=f"{accessurl}?eulaAccept={eulaAccept}",client_id=ctx.obj['ClientId'],method="POST")
-        if r.status_code>=200 and r.status_code<299:
-           response=r.json()
-           success=response.get("status",None)
+        
+        if r.status_code == 500:
+            click.echo("Error Backend reported an internal Server Error (500) please try againg later and contact the terrabyte Helpdeskt at servicedesk@terrabyte.lrz.de if the error is ongoing")
         else:
-           click.echo(f"Error we received Code {r.status_code} from the Backend reporting: {r.json().get('detail',r.json())} ")
-           
+            if r.status_code>=200 and r.status_code<299:
+                response=r.json()
+                success=response.get("status",None)
+            else:
+                click.echo(f"Error we received Stauts Code {r.status_code} from the Backend reporting: {r.json().get('detail',r.json())} ")
     except Exception as e:
          click.echo(f"Unhandled Exception {e}")
     if success:
