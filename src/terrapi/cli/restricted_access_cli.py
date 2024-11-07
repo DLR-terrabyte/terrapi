@@ -279,12 +279,15 @@ def request_access(ctx:dict,dataset:str)->None:
     success=None
     try:   
         r=wrap_request(requests.sessions.Session(),url=f"{accessurl}?eulaAccept={eulaAccept}",client_id=ctx.obj['ClientId'],method="POST")
-        if r.status_code>=200 and r.status_code<299:
-           response=r.json()
-           success=response.get("status",None)
+        
+        if r.status_code == 500:
+            click.echo("Error Backend reported an internal Server Error (500) please try againg later and contact the terrabyte Helpdeskt at servicedesk@terrabyte.lrz.de if the error is ongoing")
         else:
-           click.echo(f"Error we received Code {r.status_code} from the Backend reporting: {r.json().get('detail',r.json())} ")
-           
+            if r.status_code>=200 and r.status_code<299:
+                response=r.json()
+                success=response.get("status",None)
+            else:
+                click.echo(f"Error we received Stauts Code {r.status_code} from the Backend reporting: {r.json().get('detail',r.json())} ")
     except Exception as e:
          click.echo(f"Unhandled Exception {e}")
     if success:
