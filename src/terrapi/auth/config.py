@@ -19,7 +19,7 @@ from typing import Dict, Tuple, Union
 
 import jwt
 
-from .. import __version__
+from terrapi._version import version
 from ..config import get_user_config_dir, get_user_data_dir
 from ..util import deep_get, deep_set, rfc3339
 
@@ -149,7 +149,7 @@ class AuthConfig(PrivateJsonFile):
             data["metadata"] = {
                 "type": "AuthConfig",
                 "created": utcnow_rfc3339(),
-                "created_by": "openeo-python-client {v}".format(v=__version__),
+                "created_by": "openeo-python-client {v}".format(v=version),
                 "version": 1,
             }
             data.setdefault("general", {})
