@@ -103,6 +103,7 @@ def request_access(ctx:dict,dataset:str)->None:
     status=container.get("status","")
     if status =="registered":
         click.echo(f"You allready have access to the container {container['name']} and its dss {container['id']}. What more do you need ;-)")
+<<<<<<< HEAD
         click.echo(f"You allready have access to the container {container['name']} and its dss {container['id']}. What more do you need ;-)")
         return
     if status =="not-allowed":
@@ -253,29 +254,31 @@ def request_access(ctx:dict,dataset:str)->None:
     status=container.get("status","")
     if status =="registered":
         click.echo(f"You allready have access to the container {container["name"]} and its dss {container["id"]}. What more do you need ;-)")
+=======
+>>>>>>> c90faac (changed " to ' inside f""prints as it caused issues on linux)
         return
     if status =="not-allowed":
-        click.echo(f"Unfortunatly your Account is not eligable for the container {container["name"]}.")
+        click.echo(f"Unfortunatly your Account is not eligable for the container {container['name']}.")
         return
     if status =="available":
-        click.echo(f"You are requesting access to the DSS Container {container["name"]}.")
+        click.echo(f"You are requesting access to the DSS Container {container['name']}.")
         click.echo("Please read the following Description and the specfied Documents thoroughly")
         click.echo(" ")
-        click.echo(f"Container Name:       {container["name"]}")
-        click.echo(f"Container DSS ID:     {container["id"]}")
+        click.echo(f"Container Name:       {container['name']}")
+        click.echo(f"Container DSS ID:     {container['id']}")
         click.echo("Container Documents:")
         for href in container["hrefs"]:
             click.echo(f"{href}")
             #click.launch(href)
-        click.echo(f"\nContainer Description: \n\n {container["description"]}")
+        click.echo(f"\nContainer Description: \n\n {container['description']}")
         click.echo("####################################################\n") 
-        eulaAccept=click.confirm(f"Do you confirm that you have read the Licence Agreement of the container {container["name"]} and that you accept the stated terms and contitions?", default=False, show_default =False)
+        eulaAccept=click.confirm(f"Do you confirm that you have read the Licence Agreement of the container {container['name']} and that you accept the stated terms and contitions?", default=False, show_default =False)
         if not eulaAccept:
             click.echo("As you have not accepted the Licence Agreement, we can not request access. Sorry")
             return
     
     click.echo("")
-    click.echo(f"Eula accepted, Requesting access to container {container["name"]}")
+    click.echo(f"Eula accepted, Requesting access to container {container['name']}")
     success=None
     try:
         if ctx.obj['DEBUG']:
@@ -308,13 +311,13 @@ def request_info(ctx:dict,dataset:str):
     """ 
     container=get_container_info(ctx,dataset)
     if container:
-        click.echo(f"Container Name:       {container["name"]}")
-        click.echo(f"Container DSS ID:     {container["id"]}")
+        click.echo(f"Container Name:       {container['name']}")
+        click.echo(f"Container DSS ID:     {container['id']}")
         click.echo("Container Documents:")
-        for href in container["hrefs"]:
+        for href in container['hrefs']:
             click.echo(f"{href}")
             #click.launch(href)
-        click.echo(f"\nContainer Description: \n\n {container["description"]}")
+        click.echo(f"\nContainer Description: \n\n {container['description']}")
         
 
 
