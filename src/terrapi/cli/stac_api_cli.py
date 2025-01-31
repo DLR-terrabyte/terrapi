@@ -510,7 +510,7 @@ def get(ctx: dict,collection_id:str,outfile:TextIO, pretty:bool =False):
 @click.argument("item_id",type=str)
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
-@click.option("-a","--assets", "assetfilter", default=None, type=str, show_default = False, help="Only Print specified assets, assets are separated by ',' ")
+#@click.option("-a","--assets", "assetfilter", d  
 @click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only Print asset hrefs")
 @click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
 @click.pass_context
