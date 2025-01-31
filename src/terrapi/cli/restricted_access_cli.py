@@ -179,10 +179,10 @@ def request_info(ctx:dict,dataset:str):
         click.echo(f"Container Name:       {container["name"]}")
         click.echo(f"Container DSS ID:     {container["id"]}")
         click.echo("Container Documents:")
-        for href in container["hrefs"]:
+        for href in container['hrefs']:
             click.echo(f"{href}")
             #click.launch(href)
-        click.echo(f"\nContainer Description: \n\n {container["description"]}")
+        click.echo(f"\nContainer Description: \n\n {container['description']}")
         
 
 
