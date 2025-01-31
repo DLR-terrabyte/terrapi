@@ -187,7 +187,7 @@ def request_info(ctx:dict,dataset:str):
 
 
 restricted_data.add_command(login)
-#restricted_data.add_command(auth)
+restricted_data.add_command(auth)
 
 
 
