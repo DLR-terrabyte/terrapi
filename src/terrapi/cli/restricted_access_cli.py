@@ -1,35 +1,39 @@
 import click
 from .shared_cli import login, auth
 from ..adapter import wrap_request
-from ..settings import  TERRABYTE_RESTRICTED_DATA_API_URL
+from ..settings import  TERRABYTE_RESTRICTED_DATA_API_URL, TERRABYTE_TESTING_RESTRICTED_DATA_API_URL
 import requests
-import json
 from terminaltables import AsciiTable
 
 @click.group()
 @click.pass_context
-@click.option("-l", "local", help="Development Option to talk to backend locally (port 8000) ", default=False,type=bool, is_flag=True)
-def restricted_data(ctx:dict,local:bool):
+@click.option("-l", "local", help="Development Option to talk to backend locally (localhost:8000) ", default=False,type=bool, is_flag=True)
+@click.option("-t", "testing", help="Development Option to talk to testing backend ", default=False,type=bool, is_flag=True)
+def restricted_data(ctx:dict,local:bool, testing:bool):
     """ Self Register to restricted Datasets on DSS. 
         This tool allows you to get an overview of currently available restricted datasets, your current access status and their usage restrictions/requirements. 
-        Request access to datasets by accepting the specific EULAs 
+        Request access to datasets by accepting their specific EULAs 
     """
 
     ctx.obj['privateAPIUrl'] = TERRABYTE_RESTRICTED_DATA_API_URL
+    if testing:
+        click.echo("Switching to development backend")
+        ctx.obj['privateAPIUrl'] = TERRABYTE_TESTING_RESTRICTED_DATA_API_URL
     if local:
-        click.echo("Switching to local backend")
-        ctx.obj['privateAPIUrl'] = "http://127.0.0.1:8000"
+        click.echo("Switching to local backend") 
+        ctx.obj['privateAPIUrl'] = "http://localhost:8000"
 
 @restricted_data.command()
 @click.pass_context
 def list_available(ctx:dict):
-    """ List currently available restricted Datasets on terrabyte"""
+    """ List currently available restricted Datasets on terrabyte as well as your eligability """
 
 
     url = f"{ctx.obj['privateAPIUrl']}/list-available-DSS"
     response=None
     containers=None
-
+    if ctx.obj['DEBUG']:
+        click.echo(f"Accessing {url} via GET")
     try:   
        r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
        r.raise_for_status()
@@ -53,6 +57,8 @@ def list_available(ctx:dict):
 
 def get_container_info(ctx:dict,dataset:str)->dict:
     url = f"{ctx.obj['privateAPIUrl']}/request/container/{dataset}"
+    if ctx.obj['DEBUG']:
+        click.echo(f"Accessing {url} via GET")
     container=None
     try:   
         r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
@@ -121,7 +127,9 @@ def request_access(ctx:dict,dataset:str)->None:
     click.echo("")
     click.echo(f"Eula accepted, Requesting access to container {container["name"]}")
     success=None
-    try:   
+    try:
+        if ctx.obj['DEBUG']:
+            click.echo(f"Accesing {accessurl}?eulaAccept={eulaAccept} via POST")   
         r=wrap_request(requests.sessions.Session(),url=f"{accessurl}?eulaAccept={eulaAccept}",client_id=ctx.obj['ClientId'],method="POST")
         
         if r.status_code == 500:
@@ -161,7 +169,7 @@ def request_info(ctx:dict,dataset:str):
 
 
 restricted_data.add_command(login)
-#restricted_data.add_command(auth)
+restricted_data.add_command(auth)
 
 
 
