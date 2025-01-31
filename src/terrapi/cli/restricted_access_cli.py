@@ -277,7 +277,9 @@ def request_access(ctx:dict,dataset:str)->None:
     click.echo("")
     click.echo(f"Eula accepted, Requesting access to container {container["name"]}")
     success=None
-    try:   
+    try:
+        if ctx.obj['DEBUG']:
+            click.echo(f"Accesing {accessurl}?eulaAccept={eulaAccept} via POST")   
         r=wrap_request(requests.sessions.Session(),url=f"{accessurl}?eulaAccept={eulaAccept}",client_id=ctx.obj['ClientId'],method="POST")
         
         if r.status_code == 500:
@@ -317,7 +319,7 @@ def request_info(ctx:dict,dataset:str):
 
 
 restricted_data.add_command(login)
-#restricted_data.add_command(auth)
+restricted_data.add_command(auth)
 
 
 
