@@ -416,10 +416,10 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 
 @item.command("create")
 @click.argument("collection_id", type=str)
-@click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON. In case of FeatureCollection specify IDs seperated by ',' ")
-@click.option("-j","--json","json_str",default=None, type=str, help="Read Item or FeatureCollection as JSON String")
-@click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Item or FeatureCollection JSON from File. Specify - to read from pipe')
-@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Item if it allready exists. This only works for single Items, not for a FeatureCollections!')
+@click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
+@click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
+@click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
+@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
 @click.pass_context
