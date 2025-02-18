@@ -64,6 +64,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         #check if request was successful 
         # see https://github.com/stac-utils/stac-fastapi/blob/add05de82f745a717b674ada796db0e9f7153e27/stac_fastapi/api/stac_fastapi/api/errors.py#L23
         # https://stac.terrabyte.lrz.de/public/api/api.html#/
+        # https://eoapi.develop.eoepca.org/stac/api.html
         #fastAPI errors:
         if alt_method and r.status_code == alt_code :
             if debugCli:
@@ -424,11 +425,14 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
+@click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
 @click.pass_context
-def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False )->None:
+def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False ,quiet: bool =False )->None:
     """Create a new STAC Collection 
     
-    The Collection json can be specfied either from stdin, from a file or as a parameter. 
+    The Collection json can be specfied either from stdin, from a file or as a parameter. \n
+    The Stac Server returns updated version of the Collection 
+
     """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
@@ -444,7 +448,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
     if update:
         alt_method = "PUT"
     response=_get_json_response_from_signed_request(ctx,"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=409, json=collection)
-    if response:
+    if response and not quiet:
         click.echo(json.dumps(response))
 
 @item.command("create")
@@ -454,13 +458,16 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Item or FeatureCollection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Item if it allready exists. This only works for single Items, not for a FeatureCollections!')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
+@click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
 @click.pass_context
-def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False )->None:
+def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False, quiet: bool =False  )->None:
     """Create new Item(s) in specified Collection 
     
     The Item  json can be specfied either from stdin, from a file or as a parameter. \n
     It can either be the json of a single Item, or to batch create a FeatureCollection with an array of items as features\n
-    In case of the list
+    In case of the list of items make sure they do not exist in collection as update path is not possible in this use case. \n
+    In case of singe Item, the server formated new Item is returned unless quiet flag is passed. 
+    In case of a FeatureCollections no Items are returned by default. \n 
 
     """
     if ctx.obj['noAuth']:
@@ -505,7 +512,7 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     if update:
         alt_method = "PUT"
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
-    if response:
+    if response and not quiet:
         ind=2 if pretty else 0
         click.echo(json.dumps(response,indent=ind))
 
