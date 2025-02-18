@@ -399,7 +399,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 
 @item.command("create")
 @click.argument("collection_id", type=str)
-@click.option("--id","item_id",default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Collection JSON")
+@click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
