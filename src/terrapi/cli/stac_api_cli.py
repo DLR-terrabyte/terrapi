@@ -75,8 +75,19 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
             #if alt request was succesful switch to it
             if 200<=r2.status_code<=299:
                 r=r2
-        json_stac=r.json()
-        message=json_stac.get('message', None)
+        json_stac={}
+        try:
+            json_stac=r.json()
+        except Exception as e:
+            if debugCli:
+                click.echo("Caught Exception in converting Response to JSON")
+                click.echo(e)
+                click.echo(f"response was: {r.text}")
+                click.echo(f"status Code:{r.status_code}")
+                click.echo("Injecting empty json")
+        
+        message=json_stac.get('message', json_stac)
+
         match r.status_code:
             case 409:
                 click.echo(f"Stac API reported a Conflict ({r.status_code}) while requesting {error_desc} when calling {url}. This can occur when the creation of an existing Collection or Item is requested or when  update is called on a non exiting Collection/Item.",err=True)
@@ -343,12 +354,14 @@ def list_item(ctx: dict,collection_id:str,outfile:TextIO, all: bool = False, pre
                 newitem,hrefs=_filterItemStripHref(item,href_only, strip_file, assetfilter)
                 if href_only:
                     for href in hrefs:
-                        outfile.write(href)
-                        outfile.write("\n")
+                        outfile.write(f"{href}\n")
                     continue
                 new_items.append(newitem)
             if all:
-                outfile.write(json.dumps({'features':new_items},indent=indent))
+                if len(new_items)==1:
+                    outfile.write(json.dumps(new_items[0],indent=indent))
+                else:
+                    outfile.write(json.dumps({'features':new_items, "type": "FeatureCollection"},indent=indent))
                 outfile.write("\n")
 
 
@@ -436,34 +449,63 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 
 @item.command("create")
 @click.argument("collection_id", type=str)
-@click.option("--id","item_id",default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Collection JSON")
-@click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
-@click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
+@click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON. In case of FeatureCollection specify IDs seperated by ',' ")
+@click.option("-j","--json","json_str",default=None, type=str, help="Read Item or FeatureCollection as JSON String")
+@click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Item or FeatureCollection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
 def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False )->None:
-    """Create a new Item in specified Collection 
+    """Create new Item(s) in specified Collection 
     
-    The Item  json can be specfied either from stdin, from a file or as a parameter. 
+    The Item  json can be specfied either from stdin, from a file or as a parameter. \n
+    It can either be the json of a single Item, or to batch create a FeatureCollection with an array of items as features\n
+    In case of the list
+
     """
     if ctx.obj['noAuth']:
        click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
        exit(3)
     item=_readJson_from_file_or_str(json_str,inputfile)
-    #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
-    if item_id:
-        item['id']=item_id
+    #toDo maybe add some checks for ID and if has minimum STAC Collection requirements
+    #distinquish between single item and 
+    if item.get("type","") == "Feature":
+        if item_id:
+            item['id']=item_id
+        else:
+            item_id=item.get('id')
+        if ctx.obj['DEBUG']:
+            click.echo(f"Setting Collection ID to {collection_id}")
+        item.update({"collection":collection_id})
     else:
-        item_id=item.get('id')
+        items=item.get("features",None)
+        if items:
+            if item_id:
+                click.echo(f"item_id is {item_id} and type {item_id}")
+                item_id=item_id.split(",")
+                if (len(item_id)!=len(items)):
+                    click.echo(f"Error updating ItemIds. Received a FeatureCollection with {len(items)}, but only {len(item_id)} after splitting provided ID List={item_id} at ',' Please recheck!",err=True)
+                    exit(7)
+            idpointer=0
+            for sitem in items:
+                sitem.update({"collection":collection_id})
+                if item_id:
+                    sitem.update({"id":item_id[idpointer]})
+                    idpointer = idpointer + 1
+        else:
+            click.echo(f"Error Expected a Feature Collection but did not find the features list. \n JSON was: {item}", err=True)
+            exit(8)
+        item_id="Feature Collection"
+    if(ctx.obj["DEBUG"]):
+        click.echo(f"Modified JSON to upload is: \n {json.dumps(item)}")
     alt_method=None
     alt_code=409
     if update:
         alt_method = "PUT"
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
     if response:
-        indent=2 if pretty else 0
-        click.echo(json.dumps(response,indent))
+        ind=2 if pretty else 0
+        click.echo(json.dumps(response,indent=ind))
 
 
 @collection.command()
