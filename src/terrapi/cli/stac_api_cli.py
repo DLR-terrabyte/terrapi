@@ -452,7 +452,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 @click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON. In case of FeatureCollection specify IDs seperated by ',' ")
 @click.option("-j","--json","json_str",default=None, type=str, help="Read Item or FeatureCollection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Item or FeatureCollection JSON from File. Specify - to read from pipe')
-@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
+@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Item if it allready exists. This only works for single Items, not for a FeatureCollections!')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.pass_context
 def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False )->None:
@@ -479,6 +479,8 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         item.update({"collection":collection_id})
     else:
         items=item.get("features",None)
+        #not possible for featurecollection
+        update=False
         if items:
             if item_id:
                 click.echo(f"item_id is {item_id} and type {item_id}")
