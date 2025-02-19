@@ -107,6 +107,9 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
                 
                 click.echo(f"Stac API reported a Database Error ({r.status_code}) when calling {url}, Message: {message}", err=True)
                 return None
+            case 400:
+                click.echo(f"Stac API reported an Invalid Query Parameter  Error ({r.status_code}) when calling {url}, Message: {message}. This is most likely the case because your provided Stac JSON was not valid", err=True)
+
             case 500:
                 click.echo(f"Stac API reported an Internal Server Error ({r.status_code}) when calling {url}, Message: {message}", err=True)
                 click.echo(" Please retry again in a few Minutes and please report the issue to the terrabyte supportdesk if it persists.", err=True)
