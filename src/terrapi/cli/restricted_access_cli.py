@@ -103,19 +103,14 @@ def request_access(ctx:dict,dataset:str)->None:
     status=container.get("status","")
     if status =="registered":
         click.echo(f"You allready have access to the container {container['name']} and its dss {container['id']}. What more do you need ;-)")
-        click.echo(f"You allready have access to the container {container['name']} and its dss {container['id']}. What more do you need ;-)")
         return
     if status =="not-allowed":
-        click.echo(f"Unfortunatly your Account is not eligable for the container {container['name']}.")
         click.echo(f"Unfortunatly your Account is not eligable for the container {container['name']}.")
         return
     if status =="available":
         click.echo(f"You are requesting access to the DSS Container {container['name']}.")
-        click.echo(f"You are requesting access to the DSS Container {container['name']}.")
         click.echo("Please read the following Description and the specfied Documents thoroughly")
         click.echo(" ")
-        click.echo(f"Container Name:       {container['name']}")
-        click.echo(f"Container DSS ID:     {container['id']}")
         click.echo(f"Container Name:       {container['name']}")
         click.echo(f"Container DSS ID:     {container['id']}")
         click.echo("Container Documents:")
@@ -123,9 +118,7 @@ def request_access(ctx:dict,dataset:str)->None:
             click.echo(f"{href}")
             #click.launch(href)
         click.echo(f"\nContainer Description: \n\n {container['description']}")
-        click.echo(f"\nContainer Description: \n\n {container['description']}")
         click.echo("####################################################\n") 
-        eulaAccept=click.confirm(f"Do you confirm that you have read the Licence Agreement of the container {container['name']} and that you accept the stated terms and contitions?", default=False, show_default =False)
         eulaAccept=click.confirm(f"Do you confirm that you have read the Licence Agreement of the container {container['name']} and that you accept the stated terms and contitions?", default=False, show_default =False)
         if not eulaAccept:
             click.echo("As you have not accepted the Licence Agreement, we can not request access. Sorry")
@@ -133,11 +126,7 @@ def request_access(ctx:dict,dataset:str)->None:
     
     click.echo("")
     click.echo(f"Eula accepted, Requesting access to container {container['name']}")
-    click.echo(f"Eula accepted, Requesting access to container {container['name']}")
     success=None
-    try:
-        if ctx.obj['DEBUG']:
-            click.echo(f"Accesing {accessurl}?eulaAccept={eulaAccept} via POST")   
     try:
         if ctx.obj['DEBUG']:
             click.echo(f"Accesing {accessurl}?eulaAccept={eulaAccept} via POST")   
@@ -171,43 +160,11 @@ def request_info(ctx:dict,dataset:str):
     if container:
         click.echo(f"Container Name:       {container['name']}")
         click.echo(f"Container DSS ID:     {container['id']}")
-        click.echo(f"Container Name:       {container['name']}")
-        click.echo(f"Container DSS ID:     {container['id']}")
         click.echo("Container Documents:")
-        for href in container['hrefs']:
         for href in container['hrefs']:
             click.echo(f"{href}")
             #click.launch(href)
         click.echo(f"\nContainer Description: \n\n {container['description']}")
-        click.echo(f"\nContainer Description: \n\n {container['description']}")
-        
-
-@restricted_data.command()
-@click.argument('dataset')
-@click.pass_context
-def container_info(ctx:dict,dataset:str):
-    """ Interactively request access to specific dataset on terrabyte DSS by accepting its EULAs 
-        Dataset can be specfied either by its ID or its name
-    """
-    url = f"{ctx.obj['privateAPIUrl']}/request/container/{dataset}"
-    response=None
-    container=None
-    try:   
-       r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method="GET")
-       r.raise_for_status()
-       response=r.json()
-    except Exception as e:
-         click.echo(f"{e}")
-       # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-    if response:
-        container=response.get("container")
-        click.echo(f"Container Name:       {container["name"]}")
-        click.echo(f"Container ID:         {container["id"]}")
-        click.echo(f"Container Documents:  {container["hrefs"]}")
-        for href in container["hrefs"]:
-            click.echo(f"                      {href}")
-            #click.launch(href)
-        click.echo(f"Container Description: \n {container["description"]}")
         
 
 
