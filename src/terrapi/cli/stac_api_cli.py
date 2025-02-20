@@ -420,7 +420,8 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
 
 
 
-
+#toDo add Item /Collection Validation
+# ITEM ID  cannot contain the following characters: : / ? # [ ] @ ! $ & ' ( ) * + , ; =
  
 
 @collection.command()
