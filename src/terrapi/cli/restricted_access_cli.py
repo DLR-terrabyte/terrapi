@@ -105,9 +105,12 @@ def request_access(ctx:dict,dataset:str)->None:
         click.echo(f"You allready have access to the container {container['name']} and its dss {container['id']}. What more do you need ;-)")
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         click.echo(f"You allready have access to the container {container['name']} and its dss {container['id']}. What more do you need ;-)")
 =======
 >>>>>>> 1e243dd (cleanup after rebase)
+=======
+>>>>>>> 1e243dda45edfedd280088ad219295a9368a03ae
         return
     if status =="not-allowed":
         click.echo(f"Unfortunatly your Account is not eligable for the container {container['name']}.")
@@ -170,6 +173,7 @@ def request_info(ctx:dict,dataset:str):
             click.echo(f"{href}")
             #click.launch(href)
         click.echo(f"\nContainer Description: \n\n {container['description']}")
+<<<<<<< HEAD
         
 
 @restricted_data.command()
@@ -198,6 +202,8 @@ def container_info(ctx:dict,dataset:str):
             click.echo(f"                      {href}")
             #click.launch(href)
         click.echo(f"Container Description: \n {container["description"]}")
+=======
+>>>>>>> 1e243dda45edfedd280088ad219295a9368a03ae
         
 
 @restricted_data.command()
