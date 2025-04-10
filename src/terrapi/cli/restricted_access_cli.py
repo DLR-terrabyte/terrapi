@@ -167,24 +167,6 @@ def request_info(ctx:dict,dataset:str):
         click.echo(f"\nContainer Description: \n\n {container['description']}")
         
 
-@restricted_data.command()
-@click.argument('dataset')
-@click.pass_context
-def request_info(ctx:dict,dataset:str):
-    """ Get detailed Description of a dataset container
-        Dataset can be specfied either by its ID or its name
-    """ 
-    container=get_container_info(ctx,dataset)
-    if container:
-        click.echo(f"Container Name:       {container["name"]}")
-        click.echo(f"Container DSS ID:     {container["id"]}")
-        click.echo("Container Documents:")
-        for href in container['hrefs']:
-            click.echo(f"{href}")
-            #click.launch(href)
-        click.echo(f"\nContainer Description: \n\n {container['description']}")
-        
-
 
 restricted_data.add_command(login)
 restricted_data.add_command(auth)
