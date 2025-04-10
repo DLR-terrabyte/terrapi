@@ -47,7 +47,7 @@ def list_available(ctx:dict):
         else:
            containers=None  
     if containers:
-        table_data = [["Name","ID", "status"]]
+        table_data = [['Name','ID', 'status']]
         for container in containers:
             line=[container['name'], container['id'], container['status']]
             table_data.append(line )
