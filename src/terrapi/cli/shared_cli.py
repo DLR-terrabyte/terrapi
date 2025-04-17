@@ -15,7 +15,10 @@ import traceback
 #if needed simple stac maipulation functions
 # https://github.com/EOEPCA/open-science-catalog-builder/blob/main/osc_builder/mystac.py 
 
+
 #helper funtions
+
+
 def _get_device_authenticator(client_id:str, scopes:List[str]=None)->OidcDeviceAuthenticator:
     return OidcDeviceAuthenticator(
                 OidcClientInfo(
