@@ -3,10 +3,12 @@ from .stac_api_cli import stac
 from .restricted_access_cli import restricted_data
 from ..settings import TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID
 from ..auth.config import RefreshTokenStore
+from .. import __version__  # Import version from __init__.py
 
 
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--debug/--no-debug', default=False, help="Activate verbose outputs for debugging purposes.", hidden=True)
+@click.version_option(version=__version__, prog_name="terrapi", message="%(prog)s version %(version)s")
 @click.pass_context
 def terrapi(ctx, debug):
     """Terrabyte API Command Line Tool (terrapi)
@@ -54,5 +56,7 @@ terrapi.add_command(restricted_data)
 
 
 if __name__ == '__main__':
-    terrapi(obj={})
+     terrapi(obj={})
+
+
 

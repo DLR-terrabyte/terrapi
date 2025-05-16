@@ -540,19 +540,36 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         click.echo(json.dumps(response,indent=indent))
       
 @item.command("validate")
-@click.option("collection_id", default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Item JSON")
-@click.option("item_id", default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
+@click.option("-c","collection_id", default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Item JSON")
+@click.option("-i","item_id", default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-f", "--file", "inputfile", type=click.File('r', encoding='utf8'), help='Read Item JSON from File. Specify - to read from pipe') 
 @click.option("-j", "--json", "json_str", type=str, help="Provide item as JSON String")
+@click.pass_context
 def validate_item(ctx: dict, collection_id: str, item_id: str, inputfile: TextIO = None, json_str: str = None):
-    item=_readJson_from_file_or_str(json_str,inputfile)
+    """Validate a STAC Item.
+
+    This command validates the structure and content of a STAC Item against the STAC specification.
+    The `validate_stac_item` function ensures that the provided item adheres to the required schema and standards.
+    """
+
+    success, errors = validate_stac_item(item)
+    if not success:
+        click.echo("Validation failed. The item is not valid.", err=True)
+        if errors:
+            click.echo("Validation Errors:", err=True)
+            for error in errors:
+                click.echo(f"- {error}", err=True)
+        ctx.exit(1)
+    click.echo("Congratulations! The item is valid.")
     if item_id:
         item['id']=item_id
     if collection_id:
         item['collection']=collection_id
     success= validate_stac_item(item)
-    if success:
-        click.echo("Congratulations Item is valid.")
+    if not success:
+        click.echo("Validation failed. The item is not valid.", err=True)
+        ctx.exit(1)
+    click.echo("Congratulations Item is valid.")
     
 @collection.command()
 @click.argument("collection_id", type=str)
