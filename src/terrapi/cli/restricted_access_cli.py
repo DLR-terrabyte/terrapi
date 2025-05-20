@@ -53,9 +53,9 @@ def list_available(ctx: dict):
         else:
            containers=None  
     if containers:
-        table_data = [['Name','ID', 'status','access']]
+        table_data = [['Name','ID', 'status']]
         for container in containers:
-            line=[container['name'], container['id'], container['status'], container['access']]
+            line=[container.get('name'), container.get('id'), container.get('status')]
             table_data.append(line )
         table = AsciiTable(table_data)
         click.echo(table.table)
