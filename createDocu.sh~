@@ -4,7 +4,7 @@
 # cd md-click/
 # git checkout support-arguments
 # git pull
-# pip install --no-build-isolation . #no idea why we need the no-build-isolation but  python 3.12 fails without it
+# pip install .
 cd $(dirname $0)
 
 

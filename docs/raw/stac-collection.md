@@ -1,7 +1,18 @@
 
 # stac collection
 
- Interact with STAC Collection(s)
+Manage STAC Collections.
+
+    Collections are groups of related geospatial data items. This command group allows you to:
+    - List collections.
+    - Create, update, or delete collections.
+    - Retrieve metadata for a specific collection.
+
+    Examples:
+    - List collections: `terrapi stac collection list`
+    - Create a collection: `terrapi stac collection create --file collection.json`
+    - Delete a collection: `terrapi stac collection delete <collection_id>`
+    
 
 ## Usage
 
@@ -28,7 +39,15 @@ Usage: terrapi stac collection [OPTIONS] COMMAND [ARGS]...
 ```
 Usage: terrapi stac collection [OPTIONS] COMMAND [ARGS]...
 
-  Interact with STAC Collection(s)
+  Manage STAC Collections.
+
+  Collections are groups of related geospatial data items. This command group
+  allows you to: - List collections. - Create, update, or delete collections.
+  - Retrieve metadata for a specific collection.
+
+  Examples: - List collections: `terrapi stac collection list` - Create a
+  collection: `terrapi stac collection create --file collection.json` - Delete
+  a collection: `terrapi stac collection delete <collection_id>`
 
 Options:
   --help  Show this message and exit.
@@ -37,7 +56,7 @@ Commands:
   create  Create a new STAC Collection The Collection json can be...
   delete  Delete a Collection defined by its ID This will permanently...
   get     Get STAC Metadata for a single Collection It requires the...
-  list    List STAC Collections Collections can be filtered by regular...
+  list    List STAC Collections.
   prefix  List all acceptable read/writable prefixes for specific user...
   update  Update an existing Collection The Collection json can be...
 ```

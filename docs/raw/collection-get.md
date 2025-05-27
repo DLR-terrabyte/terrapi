@@ -34,7 +34,7 @@ Usage: terrapi stac collection get [OPTIONS] COLLECTION_ID
 
 * `outfile`:
     * Type: File
-    * Default: `stdout`
+    * Default: `<_io.TextIOWrapper name='<stdout>' encoding='utf-8'>`
     * Usage: `-o
 --outfile`
 

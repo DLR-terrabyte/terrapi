@@ -9,6 +9,9 @@ description: terrapi command line library documentation - slurm subcommand
 Create a new STAC Collection 
     
     The Collection json can be specfied either from stdin, from a file or as a parameter. 
+
+    The Stac Server returns updated version of the Collection 
+
     
 
 ## Usage
@@ -61,6 +64,16 @@ Usage: terrapi stac collection create [OPTIONS]
 
 
 
+* `quiet`:
+    * Type: BOOL
+    * Default: `False`
+    * Usage: `-q
+--quiet`
+
+    Do not print response
+
+
+
 * `help`:
     * Type: BOOL
     * Default: `False`
@@ -80,6 +93,8 @@ Usage: terrapi stac collection create [OPTIONS]
   The Collection json can be specfied either from stdin, from a file or as a
   parameter.
 
+  The Stac Server returns updated version of the Collection
+
 Options:
   --id TEXT            ID of the Collection. If specified will overwrite the
                        ID in the Collection JSON
@@ -87,6 +102,7 @@ Options:
   -f, --file FILENAME  Read Collection JSON from File. Specify - to read from
                        pipe
   -u, --update         Update Collection if it allready exists
+  -q, --quiet          Do not print response
   --help               Show this message and exit.
 ```
 

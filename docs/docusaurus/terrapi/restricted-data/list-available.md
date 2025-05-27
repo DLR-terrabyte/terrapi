@@ -6,7 +6,9 @@ description: terrapi command line library documentation - slurm subcommand
 
 # restricted-data list-available
 
- List currently available restricted Datasets on terrabyte
+List all restricted datasets available on Terrabyte DSS.
+    This command shows datasets you are eligible to access and their current status.
+    
 
 ## Usage
 
@@ -33,7 +35,8 @@ Usage: terrapi restricted-data list-available [OPTIONS]
 ```
 Usage: terrapi restricted-data list-available [OPTIONS]
 
-  List currently available restricted Datasets on terrabyte
+  List all restricted datasets available on Terrabyte DSS. This command shows
+  datasets you are eligible to access and their current status.
 
 Options:
   --help  Show this message and exit.

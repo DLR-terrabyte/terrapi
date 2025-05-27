@@ -6,9 +6,15 @@ description: terrapi command line library documentation - slurm subcommand
 
 # collection list
 
- List STAC Collections
+List STAC Collections.
+
+    Retrieve and display metadata for all available STAC collections. You can filter collections by ID, include additional metadata fields, or output the full JSON.
+
+    Examples:
+    - List all collections: `terrapi stac collection list`
+    - Filter collections by ID: `terrapi stac collection list --filter "landsat.*"`
+    - Output full JSON: `terrapi stac collection list --all`
     
-    Collections can be filtered by regular Expressions and written to File 
 
 ## Usage
 
@@ -27,7 +33,7 @@ Usage: terrapi stac collection list [OPTIONS]
     * Usage: `-f
 --filter`
 
-    Filter Collection ID with regex
+    Filter collections by ID using a regular expression.
 
 
 
@@ -37,7 +43,7 @@ Usage: terrapi stac collection list [OPTIONS]
     * Usage: `-t
 --title`
 
-    Add Title to output
+    Include collection titles in the output.
 
 
 
@@ -47,7 +53,7 @@ Usage: terrapi stac collection list [OPTIONS]
     * Usage: `-d
 --description`
 
-    Add Description to output
+    Include collection descriptions in the output.
 
 
 
@@ -57,7 +63,7 @@ Usage: terrapi stac collection list [OPTIONS]
     * Usage: `-a
 --all`
 
-    Write whole Collection JSOn to output
+    Output the full JSON for each collection.
 
 
 
@@ -67,17 +73,17 @@ Usage: terrapi stac collection list [OPTIONS]
     * Usage: `-p
 --pretty`
 
-    Indent Json Printing
+    Pretty-print JSON output.
 
 
 
 * `outfile`:
     * Type: File
-    * Default: `stdout`
+    * Default: `<_io.TextIOWrapper name='<stdout>' encoding='utf-8'>`
     * Usage: `-o
 --outfile`
 
-    Write Collections to this file instead of stdout
+    Write output to a file instead of stdout.
 
 
 
@@ -95,17 +101,23 @@ Usage: terrapi stac collection list [OPTIONS]
 ```
 Usage: terrapi stac collection list [OPTIONS]
 
-  List STAC Collections
+  List STAC Collections.
 
-  Collections can be filtered by regular Expressions and written to File
+  Retrieve and display metadata for all available STAC collections. You can
+  filter collections by ID, include additional metadata fields, or output the
+  full JSON.
+
+  Examples: - List all collections: `terrapi stac collection list` - Filter
+  collections by ID: `terrapi stac collection list --filter "landsat.*"` -
+  Output full JSON: `terrapi stac collection list --all`
 
 Options:
-  -f, --filter TEXT       Filter Collection ID with regex
-  -t, --title             Add Title to output
-  -d, --description       Add Description to output
-  -a, --all               Write whole Collection JSOn to output
-  -p, --pretty            Indent Json Printing
-  -o, --outfile FILENAME  Write Collections to this file instead of stdout
+  -f, --filter TEXT       Filter collections by ID using a regular expression.
+  -t, --title             Include collection titles in the output.
+  -d, --description       Include collection descriptions in the output.
+  -a, --all               Output the full JSON for each collection.
+  -p, --pretty            Pretty-print JSON output.
+  -o, --outfile FILENAME  Write output to a file instead of stdout.
   --help                  Show this message and exit.
 ```
 
