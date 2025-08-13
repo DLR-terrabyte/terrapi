@@ -133,7 +133,7 @@ def request_access(ctx: dict, dataset: str) -> None:
         click.echo(f"\nContainer Description: \n\n {container['description']}")
         click.echo("####################################################\n")
         eulaAccept = click.confirm(
-            f"Do you confirm that you have read the License Agreement of the container {container['name']} and that you accept the stated terms and conditions?",
+            f"Do you confirm that you have read the License Agreement of the container {container['name']} and that you accept the stated terms and conditions? [y/n]",
             default=False,
             show_default=False,
         )
