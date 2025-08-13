@@ -123,7 +123,7 @@ def request_access(ctx: dict, dataset: str) -> None:
         click.echo(f"Unfortunately, your account is not eligible for the container {container['name']}.")
         return
     if status == "available":
-        click.echo(f"You are requesting {container['access']} access to the DSS Container {container['name']}.")
+        click.echo(f"You are requesting access to the DSS Container {container['name']}.")
         click.echo("Please read the following description and the specified documents thoroughly:")
         click.echo(f"Container Name:       {container['name']}")
         click.echo(f"Container DSS ID:     {container['id']}")
