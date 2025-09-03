@@ -3,20 +3,20 @@
 
 Command Line Interface for Terrabyte STAC API.
 
-    The STAC API allows users to interact with geospatial data collections and items. 
+The STAC API allows users to interact with geospatial data collections and items. 
 
-    Features:
-    - Create, update, and delete private STAC collections and items.
-    - Query public or private STAC APIs for metadata and assets.
-    - Filter collections and items by spatial, temporal, and asset properties.
+Features:
+- Create, update, and delete private STAC collections and items.
+- Query public or private STAC APIs for metadata and assets.
+- Filter collections and items by spatial, temporal, and asset properties.
 
-    Use the `--public` flag to switch to the public API for read-only access to curated datasets.
+Use the `--public` flag to switch to the public API for read-only access to curated datasets.
 
-    Examples:
-    - List all collections: `terrapi stac collection list`
-    - Get metadata for a collection: `terrapi stac collection get <collection_id>`
-    - Create a new item: `terrapi stac item create <collection_id> --file item.json`
-    
+Examples:
+- List all collections: `terrapi stac collection list`
+- Get metadata for a collection: `terrapi stac collection get \<collection_id\>`
+- Create a new item: `terrapi stac item create \<collection_id\> --file item.json`
+
 
 ## Usage
 
@@ -93,8 +93,8 @@ Usage: terrapi stac [OPTIONS] COMMAND [ARGS]...
   curated datasets.
 
   Examples: - List all collections: `terrapi stac collection list` - Get
-  metadata for a collection: `terrapi stac collection get <collection_id>` -
-  Create a new item: `terrapi stac item create <collection_id> --file
+  metadata for a collection: `terrapi stac collection get \<collection_id\>` -
+  Create a new item: `terrapi stac item create \<collection_id\> --file
   item.json`
 
 Options:

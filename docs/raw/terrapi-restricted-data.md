@@ -1,10 +1,10 @@
 
 # terrapi restricted-data
 
- Self Register to restricted Datasets on DSS. 
-        This tool allows you to get an overview of currently available restricted datasets, your current access status and their usage restrictions/requirements. 
-        Request access to datasets by accepting their specific EULAs 
-    
+Self Register to restricted Datasets on DSS. 
+This tool allows you to get an overview of currently available restricted datasets, your current access status and their usage restrictions/requirements. 
+Request access to datasets by accepting their specific EULAs 
+
 
 ## Usage
 

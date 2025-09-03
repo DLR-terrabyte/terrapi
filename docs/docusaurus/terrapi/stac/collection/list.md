@@ -1,20 +1,20 @@
 ---
 id: list
 title: list
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - collection subcommand
 ---
 
 # collection list
 
 List STAC Collections.
 
-    Retrieve and display metadata for all available STAC collections. You can filter collections by ID, include additional metadata fields, or output the full JSON.
+Retrieve and display metadata for all available STAC collections. You can filter collections by ID, include additional metadata fields, or output the full JSON.
 
-    Examples:
-    - List all collections: `terrapi stac collection list`
-    - Filter collections by ID: `terrapi stac collection list --filter "landsat.*"`
-    - Output full JSON: `terrapi stac collection list --all`
-    
+Examples:
+- List all collections: `terrapi stac collection list`
+- Filter collections by ID: `terrapi stac collection list --filter "landsat.*"`
+- Output full JSON: `terrapi stac collection list --all`
+
 
 ## Usage
 
@@ -79,7 +79,7 @@ Usage: terrapi stac collection list [OPTIONS]
 
 * `outfile`:
     * Type: File
-    * Default: `<_io.TextIOWrapper name='<stdout>' encoding='utf-8'>`
+    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
     * Usage: `-o
 --outfile`
 

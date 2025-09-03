@@ -1,16 +1,16 @@
 ---
 id: validate
 title: validate
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - item subcommand
 ---
 
 # item validate
 
 Validate a STAC Item.
 
-    This command validates the structure and content of a STAC Item against the STAC specification.
-    The `validate_stac_item` function ensures that the provided item adheres to the required schema and standards.
-    
+This command validates the structure and content of a STAC Item against the STAC specification.
+The `validate_stac_item` function ensures that the provided item adheres to the required schema and standards.
+
 
 ## Usage
 

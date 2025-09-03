@@ -3,17 +3,17 @@
 
 Get detailed information about a dataset container.
 
-    This command retrieves and displays detailed information about a dataset container, including:
-    - Name
-    - DSS ID
-    - Associated documents (e.g., EULAs or descriptions)
-    - A detailed description of the dataset
+This command retrieves and displays detailed information about a dataset container, including:
+- Name
+- DSS ID
+- Associated documents (e.g., EULAs or descriptions)
+- A detailed description of the dataset
 
-    The dataset can be specified by its ID or name.
+The dataset can be specified by its ID or name.
 
-    Example:
-    terrapi restricted-data request-info <dataset-id-or-name>
-    
+Example:
+terrapi restricted-data request-info \<dataset-id-or-name\>
+
 
 ## Usage
 
@@ -53,7 +53,7 @@ Usage: terrapi restricted-data request-info [OPTIONS] DATASET
 
   The dataset can be specified by its ID or name.
 
-  Example: terrapi restricted-data request-info <dataset-id-or-name>
+  Example: terrapi restricted-data request-info \<dataset-id-or-name\>
 
 Options:
   --help  Show this message and exit.

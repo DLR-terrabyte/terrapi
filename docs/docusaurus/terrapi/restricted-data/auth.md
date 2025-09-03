@@ -1,17 +1,17 @@
 ---
 id: auth
 title: auth
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - restricted-data subcommand
 ---
 
 # restricted-data auth
 
- Print the single use auth token needed to directly interact with private terrapbyte APIs
-    
-    Optionally will add the parameters needed for utilities like curl or wget.
-    The returned Token is only valid for a few minutes. 
-    
-    
+Print the single use auth token needed to directly interact with private terrapbyte APIs
+
+Optionally will add the parameters needed for utilities like curl or wget.
+The returned Token is only valid for a few minutes. 
+
+
 
 ## Usage
 

@@ -15,13 +15,15 @@ cd docs/raw
 
 #patch documenation that make issues in docusaurus
 sed -i 's#<click.types.File .*>#File#g' *md
-sed -i 's#<ConsoleStream name.*stdout.*>#stdout#g' *md 
+sed -i 's#<ConsoleStream name.*stdout.*>#stdout#g' *md
+sed -i 's#<#\\<#g' *md
+sed -i 's#>#\\>#g' *md 
 
 copyAddingHeader (){
 echo "---
 id: $3
 title: $3
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - $4 subcommand
 ---">$2
 cat $1>>$2
 }
@@ -47,7 +49,7 @@ move2Subfolders () {
           copyAddingHeader $md ${folder}/${start}/${sub}/${sub}.md ${sub}
         else
            #final command
-            copyAddingHeader $md $folder/$start/${sub}.md $sub
+            copyAddingHeader $md $folder/$start/${sub}.md $sub $start
         fi 
     done
 

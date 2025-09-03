@@ -1,10 +1,10 @@
 
 # collection get
 
- Get STAC Metadata for a single Collection 
-    
-    It requires the Collection ID as an Argument
-    
+Get STAC Metadata for a single Collection 
+
+It requires the Collection ID as an Argument
+
 
 ## Usage
 
@@ -34,7 +34,7 @@ Usage: terrapi stac collection get [OPTIONS] COLLECTION_ID
 
 * `outfile`:
     * Type: File
-    * Default: `<_io.TextIOWrapper name='<stdout>' encoding='utf-8'>`
+    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
     * Usage: `-o
 --outfile`
 

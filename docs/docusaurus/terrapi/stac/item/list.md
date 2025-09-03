@@ -1,20 +1,20 @@
 ---
 id: list
 title: list
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - item subcommand
 ---
 
 # item list
 
 List STAC Items in a Collection.
 
-    Retrieve and display metadata for items in a specific collection. You can filter items by spatial and temporal properties, or output the full JSON.
+Retrieve and display metadata for items in a specific collection. You can filter items by spatial and temporal properties, or output the full JSON.
 
-    Examples:
-    - List all items: `terrapi stac item list <collection_id>`
-    - Filter items by bounding box: `terrapi stac item list <collection_id> --bbox -180 -90 180 90`
-    - Filter items by time range: `terrapi stac item list <collection_id> --datetime "2020-01-01/2020-12-31"`
-    
+Examples:
+- List all items: `terrapi stac item list \<collection_id\>`
+- Filter items by bounding box: `terrapi stac item list \<collection_id\> --bbox -180 -90 180 90`
+- Filter items by time range: `terrapi stac item list \<collection_id\> --datetime "2020-01-01/2020-12-31"`
+
 
 ## Usage
 
@@ -94,7 +94,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `outfile`:
     * Type: File
-    * Default: `<_io.TextIOWrapper name='<stdout>' encoding='utf-8'>`
+    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
     * Usage: `-o
 --outfile`
 
@@ -151,10 +151,10 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
   Retrieve and display metadata for items in a specific collection. You can
   filter items by spatial and temporal properties, or output the full JSON.
 
-  Examples: - List all items: `terrapi stac item list <collection_id>` -
-  Filter items by bounding box: `terrapi stac item list <collection_id> --bbox
+  Examples: - List all items: `terrapi stac item list \<collection_id\>` -
+  Filter items by bounding box: `terrapi stac item list \<collection_id\> --bbox
   -180 -90 180 90` - Filter items by time range: `terrapi stac item list
-  <collection_id> --datetime "2020-01-01/2020-12-31"`
+  \<collection_id\> --datetime "2020-01-01/2020-12-31"`
 
 Options:
   -b, --bbox FLOAT...     Filter items by bounding box (xmin, ymin, xmax,

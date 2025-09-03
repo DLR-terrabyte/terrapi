@@ -1,11 +1,11 @@
 
 # collection prefix
 
- List all acceptable read/writable prefixes for specific user
-    
-    The information about the prefixes is extracted from the current refresh token. 
-    Therefore if a new dss invite was accepted lately it is recommended to force the update of the token via the login function.   
-    
+List all acceptable read/writable prefixes for specific user
+
+The information about the prefixes is extracted from the current refresh token. 
+Therefore if a new dss invite was accepted lately it is recommended to force the update of the token via the login function.   
+
 
 ## Usage
 

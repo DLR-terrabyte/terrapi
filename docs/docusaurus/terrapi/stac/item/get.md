@@ -1,19 +1,19 @@
 ---
 id: get
 title: get
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - item subcommand
 ---
 
 # item get
 
 Retrieve metadata for a single STAC item.
 
-    This command fetches metadata for a specific item in a collection. Use the `--href-only` option to print only asset hrefs.
+This command fetches metadata for a specific item in a collection. Use the `--href-only` option to print only asset hrefs.
 
-    Examples:
-    - Get item metadata: `terrapi stac item get <collection_id> <item_id>`
-    - Get asset hrefs: `terrapi stac item get <collection_id> <item_id> --href-only`
-    
+Examples:
+- Get item metadata: `terrapi stac item get \<collection_id\> \<item_id\>`
+- Get asset hrefs: `terrapi stac item get \<collection_id\> \<item_id\> --href-only`
+
 
 ## Usage
 
@@ -49,7 +49,7 @@ Usage: terrapi stac item get [OPTIONS] COLLECTION_ID ITEM_ID
 
 * `outfile`:
     * Type: File
-    * Default: `<_io.TextIOWrapper name='<stdout>' encoding='utf-8'>`
+    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
     * Usage: `-o
 --outfile`
 
@@ -106,9 +106,9 @@ Usage: terrapi stac item get [OPTIONS] COLLECTION_ID ITEM_ID
   This command fetches metadata for a specific item in a collection. Use the
   `--href-only` option to print only asset hrefs.
 
-  Examples: - Get item metadata: `terrapi stac item get <collection_id>
-  <item_id>` - Get asset hrefs: `terrapi stac item get <collection_id>
-  <item_id> --href-only`
+  Examples: - Get item metadata: `terrapi stac item get \<collection_id\>
+  \<item_id\>` - Get asset hrefs: `terrapi stac item get \<collection_id\>
+  \<item_id\> --href-only`
 
 Options:
   -p, --pretty            Pretty-print JSON output.

@@ -1,24 +1,24 @@
 ---
 id: create
 title: create
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - item subcommand
 ---
 
 # item create
 
 Create new Item(s) in specified Collection 
-    
-    The Item  json can be specfied either from stdin, from a file or as a parameter. 
 
-    It can either be the json of a single Item, or to batch create a FeatureCollection with an array of items as features
+The Item  json can be specfied either from stdin, from a file or as a parameter. 
 
-    In case of the list of items make sure they do not exist in collection as update path is not possible in this use case. 
+It can either be the json of a single Item, or to batch create a FeatureCollection with an array of items as features
 
-    In case of singe Item, the server formated new Item is returned unless quiet flag is passed. 
-    In case of a FeatureCollections no Items are returned by default. 
- 
+In case of the list of items make sure they do not exist in collection as update path is not possible in this use case. 
 
-    
+In case of singe Item, the server formated new Item is returned unless quiet flag is passed. 
+In case of a FeatureCollections no Items are returned by default. 
+
+
+
 
 ## Usage
 

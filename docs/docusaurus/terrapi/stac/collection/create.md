@@ -1,18 +1,18 @@
 ---
 id: create
 title: create
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - collection subcommand
 ---
 
 # collection create
 
 Create a new STAC Collection 
-    
-    The Collection json can be specfied either from stdin, from a file or as a parameter. 
 
-    The Stac Server returns updated version of the Collection 
+The Collection json can be specfied either from stdin, from a file or as a parameter. 
 
-    
+The Stac Server returns updated version of the Collection 
+
+
 
 ## Usage
 

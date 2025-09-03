@@ -2,8 +2,8 @@
 # restricted-data list-available
 
 List all restricted datasets available on Terrabyte DSS.
-    This command shows datasets you are eligible to access and their current status.
-    
+This command shows datasets you are eligible to access and their current status.
+
 
 ## Usage
 

@@ -2,9 +2,9 @@
 # stac login
 
 Interactively login via 2FA Browser redirect to obtain refresh Token for the API. 
-    A Valid Refresh token is needed for all the other sub commands
-    It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractivly for multiple days   
-    
+A Valid Refresh token is needed for all the other sub commands
+It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractivly for multiple days   
+
 
 ## Usage
 

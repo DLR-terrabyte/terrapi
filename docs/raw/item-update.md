@@ -2,9 +2,9 @@
 # item update
 
 Update an existing Item 
-    
-    The Item  json can be specfied either from stdin, from a file or as a parameter.
-    
+
+The Item  json can be specfied either from stdin, from a file or as a parameter.
+
 
 ## Usage
 

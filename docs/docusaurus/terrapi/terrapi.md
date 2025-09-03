@@ -3,16 +3,16 @@
 
 Terrabyte API Command Line Tool (terrapi)
 
-    The Terrabyte client library (terrapi) is a command-line interface (CLI) 
-    designed to help users interact with protected Terrabyte Application Programming Interfaces (APIs). 
+The Terrabyte client library (terrapi) is a command-line interface (CLI) 
+designed to help users interact with protected Terrabyte Application Programming Interfaces (APIs). 
 
-    Features:
-    - User authentication via 2FA website redirection.
-    - Caching of long-lived refresh tokens in the user's home directory for future API calls.
-    - Support for specific APIs implemented as subcommands.
+Features:
+- User authentication via 2FA website redirection.
+- Caching of long-lived refresh tokens in the user's home directory for future API calls.
+- Support for specific APIs implemented as subcommands.
 
-    Use `terrapi --help` to see available commands and options.
-    
+Use `terrapi --help` to see available commands and options.
+
 
 ## Usage
 
