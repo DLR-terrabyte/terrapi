@@ -1,5 +1,10 @@
+---
+id: auth
+title: auth
+description: terrapi command line library documentation - restricted-data subcommand
+---
 
-# stac auth
+# restricted-data auth
 
 Print the single use auth token needed to directly interact with private terrapbyte APIs
 
@@ -11,7 +16,7 @@ The returned Token is only valid for a few minutes.
 ## Usage
 
 ```
-Usage: terrapi stac auth [OPTIONS]
+Usage: terrapi restricted-data auth [OPTIONS]
 ```
 
 ## Arguments
@@ -71,7 +76,7 @@ Usage: terrapi stac auth [OPTIONS]
 ## CLI Help
 
 ```
-Usage: terrapi stac auth [OPTIONS]
+Usage: terrapi restricted-data auth [OPTIONS]
 
   Print the single use auth token needed to directly interact with private
   terrapbyte APIs

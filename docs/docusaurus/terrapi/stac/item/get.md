@@ -1,18 +1,19 @@
 ---
 id: get
 title: get
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - item subcommand
 ---
 
 # item get
 
- Get STAC Metadata for a single Item 
+Retrieve metadata for a single STAC item.
 
-    It requires the Collection ID and Item ID.
-    Via the "assets" and "href-only" options it is possible to access the direct dss file path of the item
-    
-    
-    
+This command fetches metadata for a specific item in a collection. Use the `--href-only` option to print only asset hrefs.
+
+Examples:
+- Get item metadata: `terrapi stac item get \<collection_id\> \<item_id\>`
+- Get asset hrefs: `terrapi stac item get \<collection_id\> \<item_id\> --href-only`
+
 
 ## Usage
 
@@ -42,17 +43,17 @@ Usage: terrapi stac item get [OPTIONS] COLLECTION_ID ITEM_ID
     * Usage: `-p
 --pretty`
 
-    print pretty readable json
+    Pretty-print JSON output.
 
 
 
 * `outfile`:
     * Type: File
-    * Default: `stdout`
+    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
     * Usage: `-o
 --outfile`
 
-    Output file.
+    Write output to a file instead of stdout.
 
 
 
@@ -62,17 +63,17 @@ Usage: terrapi stac item get [OPTIONS] COLLECTION_ID ITEM_ID
     * Usage: `-a
 --assets`
 
-    Only Print specified assets, assets are separated by ',' 
+    Only print specified assets, multiple assets are separated by ','.
 
 
 
 * `href_only`:
     * Type: BOOL
     * Default: `False`
-    * Usage: `-h
+    * Usage: `-r
 --href-only`
 
-    Only Print asset hrefs
+    Only print asset hrefs.
 
 
 
@@ -82,7 +83,7 @@ Usage: terrapi stac item get [OPTIONS] COLLECTION_ID ITEM_ID
     * Usage: `-s
 --strip-file`
 
-    Remove file prefix from asset hrefs
+    Remove file prefix from asset hrefs.
 
 
 
@@ -100,18 +101,22 @@ Usage: terrapi stac item get [OPTIONS] COLLECTION_ID ITEM_ID
 ```
 Usage: terrapi stac item get [OPTIONS] COLLECTION_ID ITEM_ID
 
-  Get STAC Metadata for a single Item
+  Retrieve metadata for a single STAC item.
 
-  It requires the Collection ID and Item ID. Via the "assets" and "href-only"
-  options it is possible to access the direct dss file path of the item
+  This command fetches metadata for a specific item in a collection. Use the
+  `--href-only` option to print only asset hrefs.
+
+  Examples: - Get item metadata: `terrapi stac item get \<collection_id\>
+  \<item_id\>` - Get asset hrefs: `terrapi stac item get \<collection_id\>
+  \<item_id\> --href-only`
 
 Options:
-  -p, --pretty            print pretty readable json
-  -o, --outfile FILENAME  Output file.
-  -a, --assets TEXT       Only Print specified assets, assets are separated by
-                          ','
-  -h, --href-only         Only Print asset hrefs
-  -s, --strip-file        Remove file prefix from asset hrefs
+  -p, --pretty            Pretty-print JSON output.
+  -o, --outfile FILENAME  Write output to a file instead of stdout.
+  -a, --assets TEXT       Only print specified assets, multiple assets are
+                          separated by ','.
+  -r, --href-only         Only print asset hrefs.
+  -s, --strip-file        Remove file prefix from asset hrefs.
   --help                  Show this message and exit.
 ```
 

@@ -1,15 +1,15 @@
 ---
 id: get
 title: get
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - collection subcommand
 ---
 
 # collection get
 
- Get STAC Metadata for a single Collection 
-    
-    It requires the Collection ID as an Argument
-    
+Get STAC Metadata for a single Collection 
+
+It requires the Collection ID as an Argument
+
 
 ## Usage
 
@@ -39,7 +39,7 @@ Usage: terrapi stac collection get [OPTIONS] COLLECTION_ID
 
 * `outfile`:
     * Type: File
-    * Default: `stdout`
+    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
     * Usage: `-o
 --outfile`
 

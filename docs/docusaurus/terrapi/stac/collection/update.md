@@ -1,15 +1,15 @@
 ---
 id: update
 title: update
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - collection subcommand
 ---
 
 # collection update
 
 Update an existing Collection
-    
-    The Collection json can be specfied either from stdin, from a file or as a parameter. 
-    
+
+The Collection json can be specfied either from stdin, from a file or as a parameter. 
+
 
 ## Usage
 

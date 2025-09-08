@@ -1,15 +1,18 @@
 
 # terrapi
 
-Terrabyte API CMD Tool: terrapi
+Terrabyte API Command Line Tool (terrapi)
 
+The Terrabyte client library (terrapi) is a command-line interface (CLI) 
+designed to help users interact with protected Terrabyte Application Programming Interfaces (APIs). 
 
-     The terrabyte client library terrapi is a small command line interface 
-     to support users in interacting with protected terrabyte Application Programming Interfaces (APIs) 
-     It encompasses support for user authentication via 2FA website redirection and caches 
-     the resulting long lived refresh tokens in the Users Home for use in further API calls.
-     
-     Specific APIs are implemented as sub commands 
+Features:
+- User authentication via 2FA website redirection.
+- Caching of long-lived refresh tokens in the user's home directory for future API calls.
+- Support for specific APIs implemented as subcommands.
+
+Use `terrapi --help` to see available commands and options.
+
 
 ## Usage
 
@@ -27,7 +30,16 @@ Usage: terrapi [OPTIONS] COMMAND [ARGS]...
     * Default: `False`
     * Usage: `--debug`
 
-    activate verbose outputs
+    Activate verbose outputs for debugging purposes.
+
+
+
+* `version`:
+    * Type: BOOL
+    * Default: `False`
+    * Usage: `--version`
+
+    Show the version and exit.
 
 
 
@@ -45,20 +57,24 @@ Usage: terrapi [OPTIONS] COMMAND [ARGS]...
 ```
 Usage: terrapi [OPTIONS] COMMAND [ARGS]...
 
-  Terrabyte API CMD Tool: terrapi
+  Terrabyte API Command Line Tool (terrapi)
 
-  The terrabyte client library terrapi is a small command line interface  to
-  support users in interacting with protected terrabyte Application
-  Programming Interfaces (APIs)  It encompasses support for user
-  authentication via 2FA website redirection and caches  the resulting long
-  lived refresh tokens in the Users Home for use in further API calls.
+  The Terrabyte client library (terrapi) is a command-line interface (CLI)
+  designed to help users interact with protected Terrabyte Application
+  Programming Interfaces (APIs).
 
-  Specific APIs are implemented as sub commands
+  Features: - User authentication via 2FA website redirection. - Caching of
+  long-lived refresh tokens in the user's home directory for future API calls.
+  - Support for specific APIs implemented as subcommands.
+
+  Use `terrapi --help` to see available commands and options.
 
 Options:
-  --help  Show this message and exit.
+  --version  Show the version and exit.
+  --help     Show this message and exit.
 
 Commands:
-  stac  Command Line for terrabyte private STAC API The private Stac Api...
+  restricted-data  Self Register to restricted Datasets on DSS.
+  stac             Command Line Interface for Terrabyte STAC API.
 ```
 

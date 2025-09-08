@@ -1,15 +1,15 @@
 ---
 id: delete
 title: delete
-description: terrapi command line library documentation - slurm subcommand
+description: terrapi command line library documentation - collection subcommand
 ---
 
 # collection delete
 
- Delete a Collection defined by its ID
-    
-    This will permanently delete the specified collection with all its Items from the private STAC Catalogue. 
-    
+Delete a Collection defined by its ID
+
+This will permanently delete the specified collection with all its Items from the private STAC Catalogue. 
+
 
 ## Usage
 

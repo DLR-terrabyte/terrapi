@@ -1,11 +1,11 @@
 
 # item delete
 
- Delete an Item from Collection
-    
-    
-    This will permanently delete the specified Item from the STAC Catalogue. 
-    
+Delete an Item from Collection
+
+
+This will permanently delete the specified Item from the STAC Catalogue. 
+
 
 ## Usage
 

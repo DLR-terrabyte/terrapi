@@ -1,10 +1,10 @@
 
 # collection delete
 
- Delete a Collection defined by its ID
-    
-    This will permanently delete the specified collection with all its Items from the private STAC Catalogue. 
-    
+Delete a Collection defined by its ID
+
+This will permanently delete the specified collection with all its Items from the private STAC Catalogue. 
+
 
 ## Usage
 

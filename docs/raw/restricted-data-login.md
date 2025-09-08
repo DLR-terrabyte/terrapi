@@ -1,10 +1,5 @@
----
-id: login
-title: login
-description: terrapi command line library documentation - stac subcommand
----
 
-# stac login
+# restricted-data login
 
 Interactively login via 2FA Browser redirect to obtain refresh Token for the API. 
 A Valid Refresh token is needed for all the other sub commands
@@ -14,7 +9,7 @@ It is recommended to call this function first to make sure you have a valid toke
 ## Usage
 
 ```
-Usage: terrapi stac login [OPTIONS]
+Usage: terrapi restricted-data login [OPTIONS]
 ```
 
 ## Arguments
@@ -93,7 +88,7 @@ Usage: terrapi stac login [OPTIONS]
 ## CLI Help
 
 ```
-Usage: terrapi stac login [OPTIONS]
+Usage: terrapi restricted-data login [OPTIONS]
 
   Interactively login via 2FA Browser redirect to obtain refresh Token for the
   API.  A Valid Refresh token is needed for all the other sub commands It is

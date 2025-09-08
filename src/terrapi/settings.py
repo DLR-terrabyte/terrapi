@@ -15,6 +15,10 @@ TERRABYTE_RESTRICTED_DATA_API_URL = os.environ.get(
     "https://stac.terrabyte.lrz.de/restricted-data"
 )
 
+TERRABYTE_TESTING_RESTRICTED_DATA_API_URL = os.environ.get(
+    "TERRABYTE_TESTING_RESTRICTED_DATA_API_URL",
+    "https://stac-test.terrabyte.lrz.de/restricted-data"
+)
 
 
 TERRABYTE_AUTH_URL = os.environ.get(

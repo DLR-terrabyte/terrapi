@@ -1,6 +1,5 @@
 import click
 import json
-import ast
 import re
 import jwt
 import traceback
@@ -13,8 +12,8 @@ from ..settings import  TERRABYTE_PUBLIC_API_URL
 
 
 from ..adapter import wrap_request
-from .shared_cli import login, auth, _get_auth_refresh_tokens
-
+from .shared_cli import login, auth, _get_auth_refresh_tokens, _readJson_from_file_or_str
+from ..stac_validation import validate_bbox_exit_error, validate_stac_item_or_collection, validate_stac_item ,handle_error
 
 def _get_next_url(links)->str|None:
     if links:
@@ -44,11 +43,17 @@ def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_
         json_stac['links']=[link for link in json_stac['links'] if link['rel']!='next']
     return json_stac
 
+def construct_url(ctx: dict, path: str) -> str:
+    """Construct the appropriate URL based on the context."""
+    base_url = ctx.obj['publicStacUrl'] if ctx.obj['noAuth'] else ctx.obj['privateAPIUrl']
+    return f"{base_url}/{path}"
+
+
 def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
-    url=f"{ctx.obj['privateAPIUrl']}/{stac_path}" 
-    if ctx.obj['noAuth']: 
-        url=f"{ctx.obj['publicStacUrl']}/{stac_path}"
+    url=construct_url(ctx,stac_path)
     return(_get_json_response_from_signed_url(ctx,url, error_desc, method,alt_method,alt_code, **kwargs))
+
+
 
 
 
@@ -60,7 +65,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         if ctx.obj['noAuth']: 
             r = requests.request(url=url, method=method, **kwargs)
         else:  
-            r=wrap_request(requests.session(),url=url,client_id=ctx.obj['ClientId'],method=method,**kwargs)      
+            r=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method=method,**kwargs)      
         #check if request was successful 
         # see https://github.com/stac-utils/stac-fastapi/blob/add05de82f745a717b674ada796db0e9f7153e27/stac_fastapi/api/stac_fastapi/api/errors.py#L23
         # https://stac.terrabyte.lrz.de/public/api/api.html#/
@@ -72,7 +77,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
             if ctx.obj['noAuth']: 
                 r2= requests.request(url=url, method=alt_method, **kwargs)
             else:  
-                r2=wrap_request(requests.session(),url=url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
+                r2=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
             #if alt request was succesful switch to it
             if 200<=r2.status_code<=299:
                 r=r2
@@ -122,42 +127,6 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
             traceback.print_exc()
         return None
 
-def _readJson_from_file_or_str(json_str:str = None, inputfile:TextIO = None, debugCli=False) ->dict:
-    if (inputfile is None and json_str is None) or (inputfile and json_str):
-        click.echo("Error. Either JSON String or JSON File have to be specified. Exiting",err=True)
-        exit(4)
-        
-    if inputfile: 
-        try: 
-            json_dict=json.loads(inputfile.read())
-        except Exception as e:
-           #fallback to also try reading it via ast?
-           click.echo(f"Failed to import valid JSON from File {inputfile.name}. Exiting",err=True)
-           if debugCli:
-             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-             traceback.print_exc()  
-           exit(5)
-        return json_dict
-    if json_str: 
-        try:
-            json_dict=json.loads(json_str)
-            return json_dict
-        except Exception as e:
-            try:
-                if debugCli: 
-                    click.echo("json.loads failed. Falling back to ask convert", err=True)
-                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-                    traceback.print_exc()  
-                json_dict = ast.literal_eval(json_str)
-            except Exception as e:
-                click.echo(f"Failed to convert the String {json_str} to valid JSON. Exiting",err=True)
-                if debugCli:
-                    click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-                    traceback.print_exc()  
-                exit(5)
-    #should never be reached
-    return {}
-
 
 def _filterItemStripHref(item:dict, href_only:bool=False, strip_file:bool=False, assetfilter:list=None)->Tuple[dict,list]:
     assets=item.get('assets',[])
@@ -199,177 +168,187 @@ def _get_valid_prefixes(auth_token):
     return rw_prefix, ro_prefix
 
 
+#end helper function now come the click commands
+
 @click.group()
-@click.option("-p", "--public",default=False, is_flag = True, show_default = False, help="Switch to public API")
-@click.option("--privateURL","private_url",type=str,   show_default = False, default = None, help="overwrite private Stac URL.  Warning expert OPTION! ")
-@click.option("--publicURL","public_url",type=str,   show_default = False, default = None, help="overwrite public Stac URL.  Warning expert OPTION! ")
-@click.option("--clientID", "client_id",type=str, default = None, help="overwrite clientID.  Warning expert OPTION!", hidden=True)
-#@click.option("--scope", "scope",type=str,default = None, help="add scope, seperate multiple with ','", hidden=True)
+@click.option("-p", "--public", default=False, is_flag=True, show_default=False, help="Switch to public API for read-only access.")
+@click.option("--privateURL", "private_url", type=str, show_default=False, default=None, help="Override private STAC API URL. (Expert option)")
+@click.option("--publicURL", "public_url", type=str, show_default=False, default=None, help="Override public STAC API URL. (Expert option)")
+@click.option("--clientID", "client_id", type=str, default=None, help="Override client ID. (Expert option)", hidden=True)
 @click.pass_context
-def stac(ctx:dict, public: bool = False ,private_url:str = None, public_url:str = None, client_id:str=None, scope:str=None):
-    """Command Line for terrabyte private STAC API
-    The private Stac Api allows you to create/update your own private or shared (between all users of a dss container) STAC Collections and Items
-    To mark a collection as private prepend the name of the collection with your LRZ username, e.g., something like "di99abc.Sentinel2Classification"
-    To mark a collection as shared prepend its name with DSS Container ID  like "pn56su-dss-0020" 
-    All write/readable prefixes can be obtained from the sub command prefix.
-    The public flag allows the read-only usage of terrapi for the currated public STAC API 
+def stac(ctx: dict, public: bool = False, private_url: str = None, public_url: str = None, client_id: str = None):
+    """Command Line Interface for Terrabyte STAC API.
+
+    The STAC API allows users to interact with geospatial data collections and items. 
+
+    Features:
+    - Create, update, and delete private STAC collections and items.
+    - Query public or private STAC APIs for metadata and assets.
+    - Filter collections and items by spatial, temporal, and asset properties.
+
+    Use the `--public` flag to switch to the public API for read-only access to curated datasets.
+
+    Examples:
+    - List all collections: `terrapi stac collection list`
+    - Get metadata for a collection: `terrapi stac collection get <collection_id>`
+    - Create a new item: `terrapi stac item create <collection_id> --file item.json`
     """
     if private_url:
-        ctx.obj['privateAPIUrl']=private_url
-        if ctx.obj['DEBUG']: 
-            click.echo(f"Api URl is now {private_url}")
+        ctx.obj['privateAPIUrl'] = private_url
+        if ctx.obj['DEBUG']:
+            click.echo(f"Private API URL set to {private_url}")
 
     if public_url:
-        ctx.obj['publicStacUrl']=public_url
-        public=True
-        if ctx.obj['DEBUG']: 
-            click.echo(f"Api URl is now {public_url}")
+        ctx.obj['publicStacUrl'] = public_url
+        public = True
+        if ctx.obj['DEBUG']:
+            click.echo(f"Public API URL set to {public_url}")
     else:
-        ctx.obj['publicStacUrl']=TERRABYTE_PUBLIC_API_URL
-    
-    ctx.obj['noAuth']=public
+        ctx.obj['publicStacUrl'] = TERRABYTE_PUBLIC_API_URL
+
+    ctx.obj['noAuth'] = public
     if public and ctx.obj['DEBUG']:
-        click.echo("Switching to public STAC API. Update/modify not possible")
-        click.echo(f"Api URl is now {ctx.obj['publicStacUrl']}")
-    
+        click.echo("Switched to public STAC API. Update/modify operations are not allowed.")
+        click.echo(f"Public API URL: {ctx.obj['publicStacUrl']}")
+
     if client_id:
-        if ctx.obj['DEBUG']: 
-            click.echo(f"Client ID is now {client_id}")
-        ctx.obj['ClientId']=client_id
-        
-    if scope:
-        oidScopes=scope.split(",")
-        if ctx.obj['DEBUG']: 
-            click.echo(f"Adding Scope(s): {oidScopes}")
-        ctx.obj['oidScopes']=[scope]
+        if ctx.obj['DEBUG']:
+            click.echo(f"Client ID set to {client_id}")
+        ctx.obj['ClientId'] = client_id
 
-        
-    
 
-#define subcommands
 @click.group()
 @click.pass_context
 def collection(ctx: dict):
-    """ Interact with STAC Collection(s)"""
-    #print("in Collection")
+    """Manage STAC Collections.
+
+    Collections are groups of related geospatial data items. This command group allows you to:
+    - List collections.
+    - Create, update, or delete collections.
+    - Retrieve metadata for a specific collection.
+
+    Examples:
+    - List collections: `terrapi stac collection list`
+    - Create a collection: `terrapi stac collection create --file collection.json`
+    - Delete a collection: `terrapi stac collection delete <collection_id>`
+    """
     pass
+
 
 @click.group()
 @click.pass_context
 def item(ctx: dict):
-    """ Interact with Stac Item(s)"""
+    """Manage STAC Items.
+
+    Items are individual geospatial data records within a collection. This command group allows you to:
+    - List items in a collection.
+    - Create, update, or delete items.
+    - Retrieve metadata for a specific item.
+
+    Examples:
+    - List items: `terrapi stac item list <collection_id>`
+    - Create an item: `terrapi stac item create <collection_id> --file item.json`
+    - Delete an item: `terrapi stac item delete <collection_id> <item_id>`
+    """
     pass
 
 
-
 @collection.command()
-@click.option("-f","--filter",type=str, default="", help="Filter Collection ID with regex")
-@click.option("-t", "--title",default=False, is_flag = True, show_default = False, help="Add Title to output")
-@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Add Description to output")
-@click.option("-a", "--all", default=False, is_flag = True, show_default = False, help="Write whole Collection JSOn to output")
-@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Json Printing")
-@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Collections to this file instead of stdout', default=click.get_text_stream('stdout'))
+@click.option("-f", "--filter", type=str, default="", help="Filter collections by ID using a regular expression.")
+@click.option("-t", "--title", default=False, is_flag=True, help="Include collection titles in the output.")
+@click.option("-d", "--description", default=False, is_flag=True, help="Include collection descriptions in the output.")
+@click.option("-a", "--all", default=False, is_flag=True, help="Output the full JSON for each collection.")
+@click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
+@click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
 @click.pass_context
-def list(ctx: dict,outfile:TextIO,filter: str ="", title: bool = False, description: bool = False,all:bool=False, pretty:bool=False):
-    """ List STAC Collections
-    
-    Collections can be filtered by regular Expressions and written to File """
-    indent=0
-    if pretty:
-        indent=2
-    collections=_get_json_response_from_signed_request_paging(ctx,"collections", "Collections")
+def list(ctx: dict, outfile, filter: str = "", title: bool = False, description: bool = False, all: bool = False, pretty: bool = False):
+    """List STAC Collections.
+
+    Retrieve and display metadata for all available STAC collections. You can filter collections by ID, include additional metadata fields, or output the full JSON.
+
+    Examples:
+    - List all collections: `terrapi stac collection list`
+    - Filter collections by ID: `terrapi stac collection list --filter "landsat.*"`
+    - Output full JSON: `terrapi stac collection list --all`
+    """
+    indent = 2 if pretty else 0
+    collections = _get_json_response_from_signed_request_paging(ctx, "collections", "Collections")
     if collections:
-        collections=collections.get('collections')
+        collections = collections.get('collections')
     if collections:
-        if filter != "":
-            collections=[collection for collection in collections if re.search(filter, collection.get('id',""))]
+        if filter:
+            collections = [collection for collection in collections if re.search(filter, collection.get('id', ""))]
         if all:
-            outfile.write(json.dumps({'collections':collections},indent=indent))
+            outfile.write(json.dumps({'collections': collections}, indent=indent))
             outfile.write("\n")
-        else:          
+        else:
             for collection in collections:
                 outfile.write(f"{collection['id']}\n")
                 if title and 'title' in collection:
-                    outfile.write(f"title= '{collection['title']}'")
+                    outfile.write(f"Title: {collection['title']}\n")
                 if description and 'description' in collection:
-                    outfile.write(f"description= '{collection['description']}'\n")
-                    outfile.write("\n")
-    
+                    outfile.write(f"Description: {collection['description']}\n")
+                outfile.write("\n")
+
+
 @item.command("list")
-#@click.option("-f","--filter", type=str, default="", help="Filter Expression as jw")
-@click.option( "--all", default=False, is_flag = True, show_default = False, help="Print whole STAC Item")
-@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="Indent Item Printing")
-@click.option("-b", "--bbox",  nargs=4, default=None, type=float, help="Bounding Box for results: xmax, ymax, xmin, ymin Lon/Lat Coordinates")
-@click.option("-d", "--datetime", default=None, type=str, help="Time Range of results. E.g 2018-02-12T00:00:00Z/2018-03-18T12:31:12Z")
-@click.option("-l","--limit", default=None, type=int, help="Maximum Number of Items to request from API in one call")
-@click.option("-m","--max", default=None, type=int, help="Maximum Number of Items to receive in total")
-#@click.option("-d", "--description",default=False, is_flag = True, show_default = False, help="Print Description to output")
-@click.option("-a","--assets", "assetfilter", default=None, type=str, show_default = False, help="Only print specified assets, multiple assets are separated by ',' ")
-@click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only print asset hrefs")
-@click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
-@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Write Results to this file', default=click.get_text_stream('stdout'))
 @click.argument("collection_id", type=str)
+@click.option("-b", "--bbox", nargs=4, type=float, help="Filter items by bounding box (xmin, ymin, xmax, ymax).")
+@click.option("-d", "--datetime", type=str, help="Filter items by time range (e.g., 2020-01-01/2020-12-31).")
+@click.option("-l", "--limit", type=int, help="Limit the number of items returned in a single request.")
+@click.option("-m", "--max", type=int, help="Limit the total number of items returned.")
+@click.option("-a", "--all", default=False, is_flag=True, help="Output the full JSON for each item.")
+@click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
+@click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
+@click.option("-a", "--assets", "assetfilter", default=None, type=str, show_default = False, help="Only print specified assets, multiple assets are separated by ',' ")
+@click.option("-r", "--href-only", default=False, is_flag = True, show_default = False, help="Only print asset hrefs")
+@click.option("-s", "--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
 @click.pass_context
-def list_item(ctx: dict,collection_id:str,outfile:TextIO, all: bool = False, pretty: bool = False,bbox= None,datetime=None, limit=None, max=None,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
-    """ List STAC Items in a specific Collection 
-    
-    The items can be filtered by time and space.
-      It is also possible to specify spefic assets as well as only printing the path to the assets. 
-      This allows the creation of a file list for processing in not stac aware applications 
+def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bool, pretty: bool, outfile,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
+    """List STAC Items in a Collection.
+
+    Retrieve and display metadata for items in a specific collection. You can filter items by spatial and temporal properties, or output the full JSON.
+
+    Examples:
+    - List all items: `terrapi stac item list <collection_id>`
+    - Filter items by bounding box: `terrapi stac item list <collection_id> --bbox -180 -90 180 90`
+    - Filter items by time range: `terrapi stac item list <collection_id> --datetime "2020-01-01/2020-12-31"`
     """
     if href_only and all:
-        click.echo("Warning options --all and --href-only make no sense together! Decide what you want! Everything or only the file links! Then come back and try again",err=True, color="Red")
-        exit(1)
-    kwargs={}
-    params={}
+       handle_error(ctx,"Error: Options --all and --href-only cannot be used together.", 1)
+
+    params = {}
     if max and not limit:
-        limit=max
+        limit = max
     if limit:
-        if max:
-            limit=min(limit,max)
-        params.update({'limit':limit})
+        params['limit'] = min(limit, max) if max else limit
     if datetime:
-        params.update({'datetime':datetime})
+        params['datetime'] = datetime
     if bbox:
-        params.update({'bbox':','.join(str(b) for b in bbox) })
-    if params:
-        kwargs.update({'params': params})
-    if assetfilter:
-        assetfilter=assetfilter.split(",")
-    
-    
-    featureCollection=_get_json_response_from_signed_request_paging(ctx,f"collections/{collection_id}/items", f"Items in Collection {collection_id}",maxElements=max, **kwargs)
-   #['collections']
-   # click.echo(json.dumps(featureCollection['features'],indent=2))
-    if featureCollection:
-        items=featureCollection.get('features')
-        indent=2 if pretty else 0
+        validate_bbox_exit_error(bbox)
+        params['bbox'] = ','.join(map(str, bbox))
+
+    path = f"collections/{collection_id}/items"
+    feature_collection = _get_json_response_from_signed_request(ctx, path, f"Items in Collection {collection_id}", params=params)
+    if feature_collection:
+        items = feature_collection.get('features', [])
+        indent = 2 if pretty else 0
         if items:
-            new_items=[]
-            if max and len(items)> max:
-                items =items[:max]
+            new_items = []
+            if max and len(items) > max:
+                items = items[:max]
             for item in items:
                 if not (href_only or all):
                     outfile.write(f"{item.get('id')}\n")
                     continue
-                newitem,hrefs=_filterItemStripHref(item,href_only, strip_file, assetfilter)
+                new_item, hrefs = _filterItemStripHref(item, href_only, strip_file, assetfilter)
                 if href_only:
                     for href in hrefs:
                         outfile.write(f"{href}\n")
                     continue
-                new_items.append(newitem)
+                new_items.append(new_item)
             if all:
-                if len(new_items)==1:
-                    outfile.write(json.dumps(new_items[0],indent=indent))
-                else:
-                    outfile.write(json.dumps({'features':new_items, "type": "FeatureCollection"},indent=indent))
-                outfile.write("\n")
-
-
-
-#@collection.command()
-#def search():
-
+                outfile.write(json.dumps({'features': new_items, "type": "FeatureCollection"}, indent=indent) + "\n")
 
 
 @collection.command()
@@ -382,15 +361,13 @@ def delete(ctx: dict, collection_id:str):
     This will permanently delete the specified collection with all its Items from the private STAC Catalogue. 
     """
     if ctx.obj['noAuth']:
-       click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
-       exit(3)
+       handle_error("ERROR! Delete is only possible for private stac API. Exiting", 3)
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}" , f"deletion of {collection_id}", method="DELETE")
     if not response:
-        click.echo(f"Failed to delete Collection {collection_id}")
-    else :
-        returned_id=response.get('deleted collection',None)
-        if returned_id == id:
-            click.echo(f"Deleted Collection {collection_id}")
+        handle_error(ctx,f"Failed to delete Collection {collection_id}",1)
+    returned_id=response.get('deleted collection',None)
+    if returned_id == id:
+        click.echo(f"Deleted Collection {collection_id}")
 
 
 @item.command("delete")
@@ -405,11 +382,10 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
     This will permanently delete the specified Item from the STAC Catalogue. 
     """
     if ctx.obj['noAuth']:
-       click.echo("ERROR! Delete is only possible for private stac API. Exiting", err=True)
-       exit(3)
+       handle_error(ctx, "ERROR! Delete is only possible for private stac API. Exiting")
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"deletion of {collection_id}", method="DELETE")
     if not response:
-        click.echo(f"Failed to delete Item {item_id} from {collection_id}")
+        handle_error(ctx,f"Failed to delete Item {item_id} from {collection_id}")
     else :
         returned_id=response.get('deleted item',None)
         if returned_id == item_id:
@@ -435,28 +411,24 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 
     """
     if ctx.obj['noAuth']:
-       click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
-       exit(3)
+      handle_error(ctx,"ERROR! Create is only possible for private stac API. Exiting")
     collection=_readJson_from_file_or_str(json_str,inputfile)
     #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
     if id:
         collection['id']=id
     else:
         id=collection.get('id')
-    alt_method=None
-
-    if update:
-        alt_method = "PUT"
+    alt_method=None if not update else "PUT"
     response=_get_json_response_from_signed_request(ctx,"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=409, json=collection)
     if response and not quiet:
         click.echo(json.dumps(response))
 
 @item.command("create")
 @click.argument("collection_id", type=str)
-@click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON. In case of FeatureCollection specify IDs seperated by ',' ")
-@click.option("-j","--json","json_str",default=None, type=str, help="Read Item or FeatureCollection as JSON String")
-@click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Item or FeatureCollection JSON from File. Specify - to read from pipe')
-@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Item if it allready exists. This only works for single Items, not for a FeatureCollections!')
+@click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
+@click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
+@click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
+@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
 @click.pass_context
@@ -471,8 +443,7 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 
     """
     if ctx.obj['noAuth']:
-       click.echo("ERROR! Create is only possible for private stac API. Exiting", err=True)
-       exit(3)
+       handle_error(ctx,"ERROR! Create is only possible for private stac API. Exiting")
     item=_readJson_from_file_or_str(json_str,inputfile)
     #toDo maybe add some checks for ID and if has minimum STAC Collection requirements
     #distinquish between single item and 
@@ -493,8 +464,8 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
                 click.echo(f"item_id is {item_id} and type {item_id}")
                 item_id=item_id.split(",")
                 if (len(item_id)!=len(items)):
-                    click.echo(f"Error updating ItemIds. Received a FeatureCollection with {len(items)}, but only {len(item_id)} after splitting provided ID List={item_id} at ',' Please recheck!",err=True)
-                    exit(7)
+                    handle_error(ctx, f"Error updating ItemIds. Received a FeatureCollection with {len(items)}, but only {len(item_id)} after splitting provided ID List={item_id} at ',' Please recheck!",7)
+                    
             idpointer=0
             for sitem in items:
                 sitem.update({"collection":collection_id})
@@ -502,15 +473,12 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
                     sitem.update({"id":item_id[idpointer]})
                     idpointer = idpointer + 1
         else:
-            click.echo(f"Error Expected a Feature Collection but did not find the features list. \n JSON was: {item}", err=True)
-            exit(8)
+            handle_error(ctx, f"Error Expected a Feature Collection but did not find the features list. \n JSON was: {item}",8)
         item_id="Feature Collection"
     if(ctx.obj["DEBUG"]):
         click.echo(f"Modified JSON to upload is: \n {json.dumps(item)}")
-    alt_method=None
+    alt_method=None if not update else "PUT"
     alt_code=409
-    if update:
-        alt_method = "PUT"
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
     if response and not quiet:
         ind=2 if pretty else 0
@@ -555,8 +523,8 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     The Item  json can be specfied either from stdin, from a file or as a parameter.
     """
     if ctx.obj['noAuth']:
-       click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
-       exit(3)
+       handle_error(ctx,"ERROR! Update is only possible for private stac API. Exiting", exit_code=3)
+
     item=_readJson_from_file_or_str(json_str,inputfile)
     #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
     if item_id:
@@ -571,10 +539,38 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         indent=2 if pretty else 0 
         click.echo(json.dumps(response,indent=indent))
       
+@item.command("validate")
+@click.option("-c","collection_id", default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Item JSON")
+@click.option("-i","item_id", default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
+@click.option("-f", "--file", "inputfile", type=click.File('r', encoding='utf8'), help='Read Item JSON from File. Specify - to read from pipe') 
+@click.option("-j", "--json", "json_str", type=str, help="Provide item as JSON String")
+@click.pass_context
+def validate_item(ctx: dict, collection_id: str, item_id: str, inputfile: TextIO = None, json_str: str = None):
+    """Validate a STAC Item.
 
+    This command validates the structure and content of a STAC Item against the STAC specification.
+    The `validate_stac_item` function ensures that the provided item adheres to the required schema and standards.
+    """
 
-
-
+    success, errors = validate_stac_item(item)
+    if not success:
+        click.echo("Validation failed. The item is not valid.", err=True)
+        if errors:
+            click.echo("Validation Errors:", err=True)
+            for error in errors:
+                click.echo(f"- {error}", err=True)
+        ctx.exit(1)
+    click.echo("Congratulations! The item is valid.")
+    if item_id:
+        item['id']=item_id
+    if collection_id:
+        item['collection']=collection_id
+    success= validate_stac_item(item)
+    if not success:
+        click.echo("Validation failed. The item is not valid.", err=True)
+        ctx.exit(1)
+    click.echo("Congratulations Item is valid.")
+    
 @collection.command()
 @click.argument("collection_id", type=str)
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
@@ -585,49 +581,44 @@ def get(ctx: dict,collection_id:str,outfile:TextIO, pretty:bool =False):
     
     It requires the Collection ID as an Argument
     """
-    collection=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}" , f"Collection {collection_id}", method="GET")
+    path = f"collections/{collection_id}"
+    collection = _get_json_response_from_signed_request(ctx, path, f"Collection {collection_id}")
     if collection:
-        indent=2 if pretty else 0 
-        outfile.write(json.dumps(collection,indent=indent))
-        outfile.write("\n")
-
+        indent = 2 if pretty else 0
+        outfile.write(json.dumps(collection, indent=indent) + "\n")
 
 
 @item.command("get")
 @click.argument("collection_id", type=str)
-@click.argument("item_id",type=str)
-@click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
-@click.option("-o", "--outfile","outfile",type=click.File('w', encoding='utf8'), help='Output file.', default=click.get_text_stream('stdout'))
-@click.option("-a","--assets", "assetfilter", default=None, type=str, show_default = False, help="Only Print specified assets, assets are separated by ',' ")
-@click.option("-h", "--href-only", default=False, is_flag = True, show_default = False, help="Only Print asset hrefs")
-@click.option("-s","--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
+@click.argument("item_id", type=str)
+@click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
+@click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
+@click.option("-a", "--assets", "assetfilter", default=None, type=str, help="Only print specified assets, multiple assets are separated by ','.")
+@click.option("-r", "--href-only", default=False, is_flag=True, help="Only print asset hrefs.")
+@click.option("-s", "--strip-file", default=False, is_flag=True, help="Remove file prefix from asset hrefs.")
 @click.pass_context
-def get_item(ctx: dict, collection_id:str, item_id:str, outfile:TextIO, pretty:bool =False,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
-    """ Get STAC Metadata for a single Item 
+def get_item(ctx: dict, collection_id: str, item_id: str, outfile, pretty: bool, assetfilter: str, href_only: bool, strip_file: bool):
+    """Retrieve metadata for a single STAC item.
 
-    It requires the Collection ID and Item ID.
-    Via the "assets" and "href-only" options it is possible to access the direct dss file path of the item
-    
-    
+    This command fetches metadata for a specific item in a collection. Use the `--href-only` option to print only asset hrefs.
+
+    Examples:
+    - Get item metadata: `terrapi stac item get <collection_id> <item_id>`
+    - Get asset hrefs: `terrapi stac item get <collection_id> <item_id> --href-only`
     """
-    item=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Item {item_id} from Collection {collection_id}", method="GET")
+    path = f"collections/{collection_id}/items/{item_id}"
+    item = _get_json_response_from_signed_request(ctx, path, f"Item {item_id} from Collection {collection_id}")
     if item:
-        indent=2 if pretty else 0 
+        indent = 2 if pretty else 0
         if assetfilter:
-            assetfilter=assetfilter.split(",")
+            assetfilter = assetfilter.split(",")
         if assetfilter or href_only or strip_file:
-            item,hrefs=_filterItemStripHref(item,href_only,strip_file,assetfilter)
+            item, hrefs = _filterItemStripHref(item, href_only, strip_file, assetfilter)
         if href_only:
             for href in hrefs:
-                 outfile.write(href)
-                 outfile.write("\n")
+                outfile.write(href + "\n")
         else:
-            outfile.write(json.dumps(item,indent=indent))
-            outfile.write("\n")
-
-
-
-
+            outfile.write(json.dumps(item, indent=indent) + "\n")
 
 
 @collection.command()

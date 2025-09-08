@@ -21,6 +21,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Tuple, Union
 from urllib.parse import urljoin
+import traceback
+import click
 
 import requests
 
@@ -32,7 +34,6 @@ except ImportError:
 
 
 logger = logging.getLogger(__name__)
-
 
 class Rfc3339:
     """
