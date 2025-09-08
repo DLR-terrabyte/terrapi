@@ -158,7 +158,7 @@ def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, h
     It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractivly for multiple days   
     """
     if ctx.obj['DEBUG']:
-        click.echo(f"Till is: {till}")
+        click.echo(f"Till is: {till},force is {force}, valid is {valid}, delete is {delete}, days is {days}, hours is {hours}")
     stac_issuer=_get_issuer(ctx.obj['privateAPIUrl'])
     validTill=datetime.now()+timedelta(hours=hours, days=days)
     if till:
