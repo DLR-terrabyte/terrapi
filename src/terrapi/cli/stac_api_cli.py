@@ -450,6 +450,28 @@ def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bo
                 outfile.write(json.dumps({'features': new_items, "type": "FeatureCollection"}, indent=indent) + "\n")
 
 
+@item.command("queryables")
+@click.argument("collection_id", type=str)
+@click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
+@click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
+@click.pass_context
+def get_queryables(ctx: dict, collection_id: str, pretty: bool, outfile):
+    """Get queryable attributes for items in a collection.
+
+    Retrieves the schema of queryable attributes that can be used for filtering items
+    in the specified collection using CQL2 expressions.
+
+    Examples:
+    - Get queryables: `terrapi stac item queryables <collection_id>`
+    - Pretty print: `terrapi stac item queryables <collection_id> --pretty`
+    """
+    path = f"collections/{collection_id}/queryables"
+    queryables = _get_json_response_from_signed_request(ctx, path, f"Queryables for Collection {collection_id}")
+    
+    if queryables:
+        indent = 2 if pretty else 0
+        outfile.write(json.dumps(queryables, indent=indent) + "\n")
+
 @collection.command()
 @click.argument("collection_id")
 @click.confirmation_option(help='Confirm deletion.', prompt='Are you sure you want to delete the Collection?')
