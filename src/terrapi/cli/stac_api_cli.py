@@ -301,8 +301,9 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
                     outfile.write(f"Description: {collection['description']}\n")
                 if title or description:
                     outfile.write("\n")
+
 @item.command("search")
-@click.option("-c", "--collection", "collections", multiple=True, help="Filter by collection ID(s).")
+@click.option("-c", "--collection", "collections", type=str, show_default=False,default=None, help="Filter by collection ID(s). Separate multiple IDs with ','")
 @click.option("-b", "--bbox", nargs=4, type=float, help="Filter items by bounding box (xmin, ymin, xmax, ymax).")
 @click.option("-d", "--datetime", type=str, help="Filter items by time range (e.g., 2020-01-01/2020-12-31).")
 @click.option("-f", "--filter", "filter_expr", type=str, help="CQL2-text filter expression.")
@@ -315,7 +316,7 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
 @click.option("-r", "--href-only", default=False, is_flag=True, show_default=False, help="Only print asset hrefs")
 @click.option("-s", "--strip-file", default=False, is_flag=True, show_default=False, help="Remove file prefix from asset hrefs")
 @click.pass_context
-def search_items(ctx: dict, collections, bbox, datetime, filter_expr, limit, max, all: bool, pretty: bool, outfile, assetfilter: str = None, href_only: bool = False, strip_file: bool = False):
+def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit, max, all: bool, pretty: bool, outfile, assetfilter: str = None, href_only: bool = False, strip_file: bool = False):
     """Search STAC Items across collections.
 
     Search for items using various filters including spatial, temporal, and custom expressions.
@@ -331,10 +332,14 @@ def search_items(ctx: dict, collections, bbox, datetime, filter_expr, limit, max
     if href_only and all:
         handle_error(ctx, "Error: Options --all and --href-only cannot be used together.", 1)
 
+    if assetfilter:
+        assetfilter = assetfilter.split(",")
+       
     # Build search parameters
     params = {}
     if collections:
-        params['collections'] = list(collections)
+        collections = collections.split(",") 
+        params['collections'] = collections
     if max and not limit:
         limit = max
     if limit:
@@ -352,6 +357,8 @@ def search_items(ctx: dict, collections, bbox, datetime, filter_expr, limit, max
     # Use the /search endpoint
     search_response = _get_json_response_from_signed_request(ctx, "search", "Item Search", method="POST", json=params)
     
+
+
     if search_response:
         items = search_response.get('features', [])
         indent = 2 if pretty else 0
