@@ -299,7 +299,8 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
                     outfile.write(f"Title: {collection['title']}\n")
                 if description and 'description' in collection:
                     outfile.write(f"Description: {collection['description']}\n")
-                outfile.write("\n")
+                if title or description:
+                    outfile.write("\n")
 
 
 @item.command("list")
