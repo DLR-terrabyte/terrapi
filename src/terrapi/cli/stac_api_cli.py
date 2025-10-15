@@ -60,7 +60,7 @@ def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:st
 def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, noAuth: bool=False,**kwargs)->dict:
     debugCli =ctx.obj['DEBUG']
     if debugCli:
-        print(f" Requesting {error_desc} from {url} using {method}")
+        click.echo(f" Requesting {error_desc} from {url} using {method} and providing {kwargs}", err=True)
     try:   
         if ctx.obj['noAuth']: 
             r = requests.request(url=url, method=method, **kwargs)
