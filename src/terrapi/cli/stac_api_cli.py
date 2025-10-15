@@ -301,7 +301,87 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
                     outfile.write(f"Description: {collection['description']}\n")
                 if title or description:
                     outfile.write("\n")
+@item.command("search")
+@click.option("-c", "--collection", "collections", multiple=True, help="Filter by collection ID(s).")
+@click.option("-b", "--bbox", nargs=4, type=float, help="Filter items by bounding box (xmin, ymin, xmax, ymax).")
+@click.option("-d", "--datetime", type=str, help="Filter items by time range (e.g., 2020-01-01/2020-12-31).")
+@click.option("-f", "--filter", "filter_expr", type=str, help="CQL2-text filter expression.")
+@click.option("-l", "--limit", type=int, help="Limit the number of items returned in a single request.")
+@click.option("-m", "--max", type=int, help="Limit the total number of items returned.")
+@click.option("--all", default=False, is_flag=True, help="Output the full JSON for each item.")
+@click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
+@click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
+@click.option("-a", "--assets", "assetfilter", default=None, type=str, show_default=False, help="Only print specified assets, multiple assets are separated by ','")
+@click.option("-r", "--href-only", default=False, is_flag=True, show_default=False, help="Only print asset hrefs")
+@click.option("-s", "--strip-file", default=False, is_flag=True, show_default=False, help="Remove file prefix from asset hrefs")
+@click.pass_context
+def search_items(ctx: dict, collections, bbox, datetime, filter_expr, limit, max, all: bool, pretty: bool, outfile, assetfilter: str = None, href_only: bool = False, strip_file: bool = False):
+    """Search STAC Items across collections.
 
+    Search for items using various filters including spatial, temporal, and custom expressions.
+    The search endpoint allows querying across multiple collections at once.
+
+    Examples:
+    - Search all items: `terrapi stac item search`
+    - Filter by collection: `terrapi stac item search --collection landsat-c2-l2`
+    - Filter by bbox: `terrapi stac item search --bbox -180 -90 180 90`
+    - Filter by time: `terrapi stac item search --datetime "2020-01-01/2020-12-31"`
+    - Use CQL2 filter: `terrapi stac item search --filter "eo:cloud_cover < 10"`
+    """
+    if href_only and all:
+        handle_error(ctx, "Error: Options --all and --href-only cannot be used together.", 1)
+
+    # Build search parameters
+    params = {}
+    if collections:
+        params['collections'] = list(collections)
+    if max and not limit:
+        limit = max
+    if limit:
+        params['limit'] = min(limit, max) if max else limit
+    if datetime:
+        params['datetime'] = datetime
+    if bbox:
+        validate_bbox_exit_error(bbox)
+        params['bbox'] = list(bbox)
+    if filter_expr:
+        # Note: This assumes the STAC API supports CQL2-text
+        params['filter'] = filter_expr
+        params['filter-lang'] = 'cql2-text'
+
+    # Use the /search endpoint
+    search_response = _get_json_response_from_signed_request(ctx, "search", "Item Search", method="POST", json=params)
+    
+    if search_response:
+        items = search_response.get('features', [])
+        indent = 2 if pretty else 0
+        
+        if items:
+            new_items = []
+            if max and len(items) > max:
+                items = items[:max]
+                
+            for item in items:
+                if not (href_only or all):
+                    # Print minimal info: collection/id
+                    collection = item.get('collection', 'unknown')
+                    outfile.write(f"{collection}/{item.get('id')}\n")
+                    continue
+                    
+                new_item, hrefs = _filterItemStripHref(item, href_only, strip_file, assetfilter)
+                if href_only:
+                    for href in hrefs:
+                        outfile.write(f"{href}\n")
+                    continue
+                new_items.append(new_item)
+                
+            if all:
+                outfile.write(json.dumps({
+                    'features': new_items, 
+                    "type": "FeatureCollection",
+                    "numberMatched": search_response.get('numberMatched'),
+                    "numberReturned": len(new_items)
+                }, indent=indent) + "\n")
 
 @item.command("list")
 @click.argument("collection_id", type=str)
