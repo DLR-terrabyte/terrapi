@@ -272,6 +272,17 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
     - Output full JSON: `terrapi stac collection list --all`
     """
     indent = 2 if pretty else 0
+    # Validate regex pattern if filter is provided
+    if filter:
+        # Replace leading * with .* for more intuitive filtering
+        if filter.startswith('*'):
+            filter = '.' + filter
+        try:
+            re.compile(filter)
+        except re.error as e:
+            click.echo(f"Error: Invalid regular expression '{filter} \n Please see https://docs.python.org/3/library/re.html for correct python regex filters': {str(e)}", err=True)
+            ctx.exit(1)
+
     collections = _get_json_response_from_signed_request_paging(ctx, "collections", "Collections")
     if collections:
         collections = collections.get('collections')
@@ -297,7 +308,7 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
 @click.option("-d", "--datetime", type=str, help="Filter items by time range (e.g., 2020-01-01/2020-12-31).")
 @click.option("-l", "--limit", type=int, help="Limit the number of items returned in a single request.")
 @click.option("-m", "--max", type=int, help="Limit the total number of items returned.")
-@click.option("-a", "--all", default=False, is_flag=True, help="Output the full JSON for each item.")
+@click.option("--all", default=False, is_flag=True, help="Output the full JSON for each item.")
 @click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
 @click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
 @click.option("-a", "--assets", "assetfilter", default=None, type=str, show_default = False, help="Only print specified assets, multiple assets are separated by ',' ")
