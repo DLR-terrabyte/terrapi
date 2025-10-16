@@ -49,7 +49,9 @@ Usage: terrapi [OPTIONS] COMMAND [ARGS]...
 
 Please find more information at the terrabyte documentation site: https://docs.terrabyte.lrz.de/software/tools/terrapi/
 
-The following sub-commands are available: `stac`
+The following sub-commands are available: 
+- `stac`: Interact with the STAC API
+- `restricted_data`: Self Register to restricted Datasets on DSS
 
 ### STAC API Usage
 
@@ -58,3 +60,24 @@ Following commands are available for `terrapi stac`
 - `auth` to print the single use auth token needed to directly interact with the private STAC API
 - `collection` to interact with STAC collections
 - `item` to interact with STAC items
+
+### Restricted Data Usage
+
+Following commands are available for `terrapi restricted_data`:
+
+- `list-available`: List all restricted datasets available on Terrabyte DSS. Shows datasets you are eligible to access and their current status.
+
+- `request-access <dataset>`: Request access to a specific dataset by accepting its End User License Agreement (EULA). The dataset can be specified by its ID or name.
+  ```bash
+  terrapi restricted-data request-access <dataset-id-or-name>
+  ```
+
+- `request-info <dataset>`: Get detailed information about a dataset container, including name, DSS ID, associated documents, and description.
+  ```bash
+  terrapi restricted-data request-info <dataset-id-or-name>
+  ```
+
+- `login`: Interactively login into terrabyte via 2FA to obtain a refresh token
+- `auth`: Print the single use auth token for direct API interaction
+
+Note: Some datasets may be restricted to specific user groups (e.g., DLR employees, Specific Institutes or Departments).
