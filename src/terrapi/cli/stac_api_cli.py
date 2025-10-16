@@ -352,10 +352,10 @@ def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit
     if filter_expr:
         # Note: This assumes the STAC API supports CQL2-text
         params['filter'] = filter_expr
-        params['filter-lang'] = 'cql2-text'
+        #params['filter-lang'] = 'cql2-text'
 
     # Use the /search endpoint
-    search_response = _get_json_response_from_signed_request(ctx, "search", "Item Search", method="POST", json=params)
+    search_response = _get_json_response_from_signed_request(ctx, "search", "Item Search", method="GET", json=params)
     
 
 
