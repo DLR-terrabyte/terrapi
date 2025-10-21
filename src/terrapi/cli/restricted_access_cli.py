@@ -37,6 +37,11 @@ def list_available(ctx: dict):
         click.echo(f"Accessing {url} via GET")
     try:
         r = wrap_request(requests.sessions.Session(), url=url, client_id=ctx.obj['ClientId'], method="GET")
+        if r.status_code == 403:
+               click.echo(f"Error. Access to the restricted_data api is not allowed from this Computer. Currently the restricted_data backend is only available from the terrabyte login Nodes for security. Please rerun terrapi from one of the login nodes. Exiting", err=True)
+               if(ctx.obj["DEBUG"]):
+                   click.echo(f"Exact Error reported by Backend was: '{r.json().get('detail')}'.  Exiting", err=True)
+               return     
         r.raise_for_status()
         response = r.json()
     except requests.exceptions.HTTPError as http_err:
@@ -77,19 +82,21 @@ def get_container_info(ctx: dict, dataset: str) -> dict:
                 return response
         match r.status_code:
             case 404:
-               click.echo(f"Error requested container '{dataset}' does not exist. Exiting")
+               click.echo(f"Error requested container '{dataset}' does not exist. Exiting", err=True)
                return container 
             
             case 403:
-               click.echo(f"Error reported by Backend: {r.json().get('detail')} Exiting")
+               click.echo(f"Error. Access to the restricted_data api is not allowed from this Computer. Currently the restricted_data backend is only available from the terrabyte login Nodes for security. Please rerun terrapi from one of the login nodes. Exiting", err=True)
+               if(ctx.obj["DEBUG"]):
+                   click.echo(f"Exact Error reported by Backend was: '{r.json().get('detail')}'.  Exiting", err=True)
                return container
             case 500:
-                click.echo("Error Backend reported an internal Server Error please try againg later and contact the terrabyte Helpdeskt at servicedesk@terrabyte.lrz.de if the error is ongoing")
+                click.echo("Error Backend reported an internal Server Error please try againg later and contact the terrabyte Helpdeskt at servicedesk@terrabyte.lrz.de if the error is ongoing", err=True)
                 return container
         r.raise_for_status()
        
     except Exception as e:
-         click.echo(f"Uncaught Exception Occured: \n{e}")
+         click.echo(f"Uncaught Exception Occured: \n{e}", err=True)
        # click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
     return container
 
@@ -155,19 +162,15 @@ def request_access(ctx: dict, dataset: str) -> None:
         )
 
         if r.status_code == 500:
-            click.echo(
-                "Error: Backend reported an internal server error (500). Please try again later or contact the Terrabyte Helpdesk at servicedesk@terrabyte.lrz.de if the error persists."
-            )
+            click.echo("Error: Backend reported an internal server error (500). Please try again later or contact the Terrabyte Helpdesk at servicedesk@terrabyte.lrz.de if the error persists.", err=True)
         else:
             if 200 <= r.status_code < 299:
                 response = r.json()
                 success = response.get("status", None)
             else:
-                click.echo(
-                    f"Error: Received status code {r.status_code} from the backend. Details: {r.json().get('detail', r.json())}"
-                )
+                click.echo(f"Error: Received status code {r.status_code} from the backend. Details: {r.json().get('detail', r.json())}",err=True)
     except Exception as e:
-        click.echo(f"Unhandled exception: {e}")
+        click.echo(f"Unhandled exception: {e}", err=True)
     if success:
         click.echo(f"Status of access request: {success}")
 
