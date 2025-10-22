@@ -16,6 +16,7 @@ import time
 import hashlib
 import random
 import string
+import jwt  # Add this import at the top with other imports
 
 import requests
 
@@ -197,18 +198,17 @@ class _JupyterDeviceCodePollUi(_BasicDeviceCodePollUi):
 
 def jwt_decode(token: str) -> Tuple[dict, dict]:
     """
-    Poor man's JWT decoding
-    TODO: use a real library that also handles verification properly?
+    Decode a JWT token to get header and payload.
+    Does not verify the signature.
     """
-
-    def _decode(data: str) -> dict:
-        decoded = base64.b64decode(data + "=" * (4 - len(data) % 4)).decode(
-            "ascii"
-        )
-        return json.loads(decoded)
-
-    header, payload, signature = token.split(".")
-    return _decode(header), _decode(payload)
+    try:
+        # Decode header
+        header = jwt.get_unverified_header(token)
+        # Decode payload without verification
+        payload = jwt.decode(token, options={"verify_signature": False})
+        return header, payload
+    except jwt.InvalidTokenError as e:
+        raise OidcException(f"Invalid JWT token: {str(e)}")
 
 
 def in_jupyter_context() -> bool:

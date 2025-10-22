@@ -75,8 +75,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 * `all`:
     * Type: BOOL
     * Default: `False`
-    * Usage: `-a
---all`
+    * Usage: `--all`
 
     Output the full JSON for each item.
 
@@ -164,7 +163,7 @@ Options:
   -l, --limit INTEGER     Limit the number of items returned in a single
                           request.
   -m, --max INTEGER       Limit the total number of items returned.
-  -a, --all               Output the full JSON for each item.
+  --all                   Output the full JSON for each item.
   -p, --pretty            Pretty-print JSON output.
   -o, --outfile FILENAME  Write output to a file instead of stdout.
   -a, --assets TEXT       Only print specified assets, multiple assets are

@@ -1,31 +1,44 @@
+---
+id: search
+title: search
+description: terrapi command line library documentation - item subcommand
+---
 
-# item list
+# item search
 
-List STAC Items in a Collection.
+Search STAC Items across collections.
 
-Retrieve and display metadata for items in a specific collection. You can filter items by spatial and temporal properties, or output the full JSON.
+Search for items using various filters including spatial, temporal, and custom expressions.
+The search endpoint allows querying across multiple collections at once.
 
 Examples:
-- List all items: `terrapi stac item list \<collection_id\>`
-- Filter items by bounding box: `terrapi stac item list \<collection_id\> --bbox -180 -90 180 90`
-- Filter items by time range: `terrapi stac item list \<collection_id\> --datetime "2020-01-01/2020-12-31"`
+- Search all items: `terrapi stac item search`
+- Filter by collection: `terrapi stac item search --collection landsat-c2-l2`
+- Filter by bbox: `terrapi stac item search --bbox -180 -90 180 90`
+- Filter by time: `terrapi stac item search --datetime "2020-01-01/2020-12-31"`
+- Use CQL2 filter: `terrapi stac item search --filter "eo:cloud_cover \< 10"`
 
 
 ## Usage
 
 ```
-Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
+Usage: terrapi stac item search [OPTIONS]
 ```
 
 ## Arguments
 
-* `collection_id` (REQUIRED):
-    * Type: STRING
-    * Default: `None`
-    * Usage: `collection_id`
-
 
 ## Options
+
+* `collections`:
+    * Type: STRING
+    * Default: `None`
+    * Usage: `-c
+--collection`
+
+    Filter by collection ID(s). Separate multiple IDs with ','
+
+
 
 * `bbox`:
     * Type: FLOAT
@@ -44,6 +57,16 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 --datetime`
 
     Filter items by time range (e.g., 2020-01-01/2020-12-31).
+
+
+
+* `filter_expr`:
+    * Type: STRING
+    * Default: `None`
+    * Usage: `-f
+--filter`
+
+    CQL2-text filter expression.
 
 
 
@@ -102,7 +125,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
     * Usage: `-a
 --assets`
 
-    Only print specified assets, multiple assets are separated by ',' 
+    Only print specified assets, multiple assets are separated by ','
 
 
 
@@ -138,23 +161,28 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 ## CLI Help
 
 ```
-Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
+Usage: terrapi stac item search [OPTIONS]
 
-  List STAC Items in a Collection.
+  Search STAC Items across collections.
 
-  Retrieve and display metadata for items in a specific collection. You can
-  filter items by spatial and temporal properties, or output the full JSON.
+  Search for items using various filters including spatial, temporal, and
+  custom expressions. The search endpoint allows querying across multiple
+  collections at once.
 
-  Examples: - List all items: `terrapi stac item list \<collection_id\>` -
-  Filter items by bounding box: `terrapi stac item list \<collection_id\> --bbox
-  -180 -90 180 90` - Filter items by time range: `terrapi stac item list
-  \<collection_id\> --datetime "2020-01-01/2020-12-31"`
+  Examples: - Search all items: `terrapi stac item search` - Filter by
+  collection: `terrapi stac item search --collection landsat-c2-l2` - Filter
+  by bbox: `terrapi stac item search --bbox -180 -90 180 90` - Filter by time:
+  `terrapi stac item search --datetime "2020-01-01/2020-12-31"` - Use CQL2
+  filter: `terrapi stac item search --filter "eo:cloud_cover \< 10"`
 
 Options:
+  -c, --collection TEXT   Filter by collection ID(s). Separate multiple IDs
+                          with ','
   -b, --bbox FLOAT...     Filter items by bounding box (xmin, ymin, xmax,
                           ymax).
   -d, --datetime TEXT     Filter items by time range (e.g.,
                           2020-01-01/2020-12-31).
+  -f, --filter TEXT       CQL2-text filter expression.
   -l, --limit INTEGER     Limit the number of items returned in a single
                           request.
   -m, --max INTEGER       Limit the total number of items returned.

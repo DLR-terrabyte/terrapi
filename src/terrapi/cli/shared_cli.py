@@ -3,6 +3,8 @@ from .. auth.oidc import (
     OidcDeviceAuthenticator,
     OidcClientInfo,
     OidcProviderInfo,
+    jwt_decode,
+    OidcException
 )
 from .. settings import TERRABYTE_AUTH_URL
 from urllib.parse import urlparse, urlunparse
@@ -111,63 +113,111 @@ def _get_auth_refresh_tokens(ctx:dict, noninteractive:bool=False, force_renew: b
             return None
     return tokens
 
+def _decode_token(token: str, ctx: dict) -> None:
+    """Decode and display token contents in a formatted way."""
+    try:
+        header, payload = jwt_decode(token)
+        
+        # Display Header
+        if ctx.obj['DEBUG']:
+            click.echo("Token Header:")
+            click.echo("-" * 12)
+            for key, value in header.items():
+                click.echo(f"{key}: {value}")
+            click.echo("\n")
+
+        # Display Payload
+        click.echo("Token Payload:")
+        click.echo("-" * 13)
+        for key, value in payload.items():
+            if key in ['exp', 'iat', 'auth_time']:
+                # Convert timestamps to readable dates
+                date = datetime.fromtimestamp(value)
+                click.echo(f"{key}: {value} ({date})")
+            else:
+                click.echo(f"{key}: {value}")
+    except OidcException as e:
+        click.echo(f"Error decoding token: {str(e)}", err=True)
+        ctx.exit(1)
 
 @click.command()
-@click.option("-n", "--noninteractive",  is_flag=True, show_default=False, default=False,help="Fail if no valid Refresh Token stored")
-@click.option("-g", "--gdal",  is_flag=True, show_default=False, default=False,help="Add Paramter needed by gdal")
-@click.option("-c", "--curl",  is_flag=True, show_default=False, default=False,help="Add Paramter needed by curl")
-@click.option("-w", "--wget",  is_flag=True, show_default=False, default=False,help="Add Paramter needed by wget")
+@click.option("-n", "--noninteractive", is_flag=True, show_default=False, default=False, help="Fail if no valid Refresh Token stored")
+@click.option("-g", "--gdal", is_flag=True, show_default=False, default=False, help="Add Paramter needed by gdal")
+@click.option("-c", "--curl", is_flag=True, show_default=False, default=False, help="Add Paramter needed by curl")
+@click.option("-w", "--wget", is_flag=True, show_default=False, default=False, help="Add Paramter needed by wget")
+@click.option("--decode", is_flag=True, show_default=False, default=False, help="Decode and display token contents")
+@click.option("-e", "--echo", is_flag=True, show_default=False, default=False, help="Format output for curl or wget to use on echo c&p")
 @click.pass_context
-def auth(ctx: dict, wget:bool =False, gdal: bool = False, curl: bool = False, noninteractive:bool = False)->None:
-    """ Print the single use auth token needed to directly interact with private terrapbyte APIs
+def auth(ctx: dict, wget: bool = False, gdal: bool = False, curl: bool = False, noninteractive: bool = False, decode: bool = False, echo: bool = False) -> None:
+    """Print the single use auth token needed to directly interact with authenticated terrabyte APIs
     
     Optionally will add the parameters needed for utilities like curl or wget.
-    The returned Token is only valid for a few minutes. 
+    The returned Token is only valid for a few minutes.
+    Use --decode to view the token's contents.
+
+    For use in subshell commands, use the --subshell flag:
     
+        
+    Bash/Zsh:
+        curl -H "$(terrapi auth -c)"  https://stac.terrabyte.lrz.de/private/api/collections
+        wget --header="$(terrapi auth -w)"  https://stac.terrabyte.lrz.de/private/api/collections
+
+        echo Curl example curl $(terrapi auth -c -e)  https://stac.terrabyte.lrz.de/private/api/collections
     """
-    tokens = _get_auth_refresh_tokens(ctx,noninteractive)
-    if tokens:
-        if wget: 
-            print(f' --header="Authorization:  {tokens.access_token}" ')
-            return
-        if curl: 
-            print(f' -H "Authorization: Bearer {tokens.access_token}" ')
-            return
-        if gdal:
-            print(f'GDAL_HTTP_BEARER={tokens.access_token} ')
-            return
-        print(tokens.access_token)
-    else:
+    tokens = _get_auth_refresh_tokens(ctx, noninteractive)
+    if not tokens:
         exit(1)
-    
 
+    if decode:
+        _decode_token(tokens.access_token, ctx)
+        return
 
-
+    if wget:
+        if echo:
+            click.echo(f'--header="Authorization: Bearer {tokens.access_token}"')
+        else:
+            click.echo(f'"Authorization: Bearer {tokens.access_token}"')
+        return
+    if curl:
+        if echo:
+            click.echo(f'-H "Authorization: Bearer {tokens.access_token}"')
+        else:
+            click.echo(f'Authorization: Bearer {tokens.access_token}')
+            
+        return
+    if gdal:
+        click.echo(f'GDAL_HTTP_BEARER={tokens.access_token}')
+        return
+    click.echo(tokens.access_token)
 
 @click.command()
 @click.option("-f", "--force", is_flag=True, show_default=False, default=False, help="Force new login, discarding any existing tokens" )
-@click.option("-v", "--valid", is_flag=True, type=bool,  show_default=False,default=False, help="Will print how long the current Refresh Token is valid.")
-@click.option( "--delete", is_flag=True, show_default=False, help="Delete existing Refresh Token. Will remove the Refresh token if it exists and then exit", default=False )
-@click.option("-d", "--days", type=int,  show_default=False,default=0,help="Min Nr of days the Token needs to be valid. Will refresh Token if it expires earlier")
-@click.option("-h", "--hours", type=int, show_default=False, default=0,help="Min Nr of hours the Token needs valid. Will refresh Token if it expires earlier")
+@click.option("-v", "--valid", is_flag=True, type=bool, show_default=False, default=False, help="Will print how long the current Refresh Token is valid.")
+@click.option("--delete", is_flag=True, show_default=False, help="Delete existing Refresh Token. Will remove the Refresh token if it exists and then exit", default=False )
+@click.option("-d", "--days", type=int, show_default=False, default=0, help="Min Nr of days the Token needs to be valid. Will refresh Token if it expires earlier")
+@click.option("-h", "--hours", type=int, show_default=False, default=0, help="Min Nr of hours the Token needs valid. Will refresh Token if it expires earlier")
 @click.option("-t","--till", type=click.DateTime(), default=None, help="Date the Refresh token needs be valid. Will refresh Token if it expires earlier")
+@click.option("--decode", is_flag=True, show_default=False, default=False, help="Decode and display token contents")
 @click.pass_context
-def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: datetime = datetime.now() , valid: bool = False ):
+def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: datetime = datetime.now(), valid: bool = False, decode: bool = False):
     """Interactively login via 2FA Browser redirect to obtain refresh Token for the API. 
-    A Valid Refresh token is needed for all the other sub commands
-    It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractivly for multiple days   
+    A Valid Refresh token is needed for all the other sub commands.
+    It is recommended to call this function first to make sure you have a valid token for the remainder of your job.
+    This allows the other subcommands to run non-interactively for multiple days.
+    
+    Use --decode to view the token's contents after login.
     """
     if ctx.obj['DEBUG']:
-        click.echo(f"Till is: {till},force is {force}, valid is {valid}, delete is {delete}, days is {days}, hours is {hours}")
-    stac_issuer=_get_issuer(ctx.obj['privateAPIUrl'])
-    validTill=datetime.now()+timedelta(hours=hours, days=days)
+        click.echo(f"Till is: {till}, force is {force}, valid is {valid}, delete is {delete}, days is {days}, hours is {hours}")
+    stac_issuer = _get_issuer(ctx.obj['privateAPIUrl'])
+    validTill = datetime.now() + timedelta(hours=hours, days=days)
     if till:
-         validTill = max(till,validTill ) 
+        validTill = max(till, validTill)
    
     if ctx.obj['DEBUG']:
         click.echo(f"validTill is: {validTill}")
     if valid:
-        validity= ctx.obj['tokenStore'].get_expiry_date_refresh_token(stac_issuer, ctx.obj['ClientId'])
+        validity = ctx.obj['tokenStore'].get_expiry_date_refresh_token(stac_issuer, ctx.obj['ClientId'])
         if validity:
             click.echo(f"Refresh Token valid till: {validity.astimezone()}")
         else:
@@ -178,6 +228,10 @@ def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, h
             click.echo("Deleting Refresh Token")
         ctx.obj['tokenStore'].delete_refresh_token(stac_issuer, ctx.obj['ClientId'])
         return
-    tokens = _get_auth_refresh_tokens(ctx,force_renew=force, notExpiredBefore=validTill)
+        
+    tokens = _get_auth_refresh_tokens(ctx, force_renew=force, notExpiredBefore=validTill)
     if tokens is None:
         exit(1)
+        
+    if decode:
+        _decode_token(tokens.access_token, ctx)

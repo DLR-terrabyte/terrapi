@@ -2,8 +2,11 @@
 # stac login
 
 Interactively login via 2FA Browser redirect to obtain refresh Token for the API. 
-A Valid Refresh token is needed for all the other sub commands
-It is recommended to call this function first to make sure you have a valid token for the remainder of your job. This allows the other subcommands to run non inveractivly for multiple days   
+A Valid Refresh token is needed for all the other sub commands.
+It is recommended to call this function first to make sure you have a valid token for the remainder of your job.
+This allows the other subcommands to run non-interactively for multiple days.
+
+Use --decode to view the token's contents after login.
 
 
 ## Usage
@@ -76,6 +79,15 @@ Usage: terrapi stac login [OPTIONS]
 
 
 
+* `decode`:
+    * Type: BOOL
+    * Default: `False`
+    * Usage: `--decode`
+
+    Decode and display token contents
+
+
+
 * `help`:
     * Type: BOOL
     * Default: `False`
@@ -91,10 +103,12 @@ Usage: terrapi stac login [OPTIONS]
 Usage: terrapi stac login [OPTIONS]
 
   Interactively login via 2FA Browser redirect to obtain refresh Token for the
-  API.  A Valid Refresh token is needed for all the other sub commands It is
+  API.  A Valid Refresh token is needed for all the other sub commands. It is
   recommended to call this function first to make sure you have a valid token
-  for the remainder of your job. This allows the other subcommands to run non
-  inveractivly for multiple days
+  for the remainder of your job. This allows the other subcommands to run non-
+  interactively for multiple days.
+
+  Use --decode to view the token's contents after login.
 
 Options:
   -f, --force                     Force new login, discarding any existing
@@ -110,6 +124,7 @@ Options:
   -t, --till [%Y-%m-%d|%Y-%m-%dT%H:%M:%S|%Y-%m-%d %H:%M:%S]
                                   Date the Refresh token needs be valid. Will
                                   refresh Token if it expires earlier
+  --decode                        Decode and display token contents
   --help                          Show this message and exit.
 ```
 

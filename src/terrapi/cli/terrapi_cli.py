@@ -7,7 +7,7 @@ from .. import __version__  # Import version from __init__.py
 
 
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--debug/--no-debug', default=False, help="Activate verbose outputs for debugging purposes.", hidden=True)
+@click.option('--debug/--no-debug', '-d/-nd', default=False, help="Activate verbose outputs for debugging purposes.", hidden=True)
 @click.version_option(version=__version__, prog_name="terrapi", message="%(prog)s version %(version)s")
 @click.pass_context
 def terrapi(ctx, debug):

@@ -53,11 +53,13 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  create    Create new Item(s) in specified Collection
-  delete    Delete an Item from Collection
-  get       Retrieve metadata for a single STAC item.
-  list      List STAC Items in a Collection.
-  update    Update an existing Item
-  validate  Validate a STAC Item.
+  create      Create new Item(s) in specified Collection
+  delete      Delete an Item from Collection
+  get         Retrieve metadata for a single STAC item.
+  list        List STAC Items in a Collection.
+  queryables  Get queryable attributes for items in a collection.
+  search      Search STAC Items across collections.
+  update      Update an existing Item
+  validate    Validate a STAC Item.
 ```
 
