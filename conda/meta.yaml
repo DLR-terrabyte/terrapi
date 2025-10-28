@@ -43,3 +43,7 @@ about:
   summary: {{ data.get('description', '') }}
   description: {{ data.get('description', '') }}
   #description: {{ data.get('long_description', '') | replace('\n', '\n    ')
+
+extra:
+  channels:
+    - conda-forge
