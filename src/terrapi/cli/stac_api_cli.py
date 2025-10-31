@@ -81,6 +81,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
             #if alt request was succesful switch to it
             if 200<=r2.status_code<=299:
                 r=r2
+                method=alt_method
         json_stac={}
         try:
             json_stac=r.json()
@@ -120,7 +121,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         return json_stac
        
     except Exception as e:
-        click.echo(f"Requesting {error_desc} from URL {url} failed")
+        click.echo(f"Requesting {error_desc} from URL {url} with Method {method} failed unexpectedly.", err=True)
         if debugCli:
             click.echo("Error reported was:")
             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
@@ -549,7 +550,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 @click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
-@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
+@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Item if it allready exists')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
 @click.pass_context
@@ -579,6 +580,8 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     else:
         items=item.get("features",None)
         #not possible for featurecollection
+        if update: 
+            handle_error(ctx, "Error: Update is not possible when providing a FeatureCollection with multiple items. Please create items individually if fallback to update is needed", 5)  
         update=False
         if items:
             if item_id:
@@ -600,7 +603,7 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         click.echo(f"Modified JSON to upload is: \n {json.dumps(item)}")
     alt_method=None if not update else "PUT"
     alt_code=409
-    response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
+    response=_get_json_response_from_signed_request(ctx=ctx, stac_path=f"collections/{collection_id}/items" , error_desc=f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
     if response and not quiet:
         ind=2 if pretty else 0
         click.echo(json.dumps(response,indent=ind))
@@ -655,7 +658,7 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     if collection_id is None or item_id is None:
         click.echo(f"Error None Value in Collection Id ({collection_id}) or Item ID ({item_id})",err=True)
         exit(6)
-    response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
+    response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
     if response: 
         indent=2 if pretty else 0 
         click.echo(json.dumps(response,indent=indent))
