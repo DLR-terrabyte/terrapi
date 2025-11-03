@@ -613,8 +613,10 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     if(ctx.obj["DEBUG"]):
         click.echo(f"Modified JSON to upload is: \n {json.dumps(item)}")
     alt_method=None if not update else "PUT"
+    alt_path=None if not update else f"collections/{collection_id}/items/{item_id}"
     alt_code=409
-    response=_get_json_response_from_signed_request(ctx=ctx, stac_path=f"collections/{collection_id}/items" , error_desc=f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
+    response=_get_json_response_from_signed_request(ctx=ctx, stac_path=f"collections/{collection_id}/items" , error_desc=f"Create Item {item_id} in Collection {collection_id}", 
+                                                    method="POST",alt_method=alt_method,alt_code=alt_code,alt_path=alt_path, json=item)
     if response and not quiet:
         ind=2 if pretty else 0
         click.echo(json.dumps(response,indent=ind))
