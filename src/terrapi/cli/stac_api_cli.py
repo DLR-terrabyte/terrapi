@@ -96,6 +96,9 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         message=json_stac.get('message', json_stac)
 
         match r.status_code:
+            case 400:
+                click.echo(f"Stac API reported a Bad Request ({r.status_code}) when calling {url}, Message: {message}", err=True)
+                return None
             case 409:
                 click.echo(f"Stac API reported a Conflict ({r.status_code}) while requesting {error_desc} when calling {url}. This can occur when the creation of an existing Collection or Item is requested or when  update is called on a non exiting Collection/Item.",err=True)
                 return None
@@ -121,7 +124,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         return json_stac
        
     except Exception as e:
-        click.echo(f"Requesting {error_desc} from URL {url} with Method {method} failed unexpectedly.", err=True)
+        click.echo(f"Requesting {error_desc} from URL {url} with Method {method} failed unexpectedly. Error Description  from Backend was{message}", err=True)
         if debugCli:
             click.echo("Error reported was:")
             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
@@ -629,6 +632,7 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = No
         collection['id']=id
     else:
         id=collection.get('id')
+
     response=_get_json_response_from_signed_request(ctx,f"collections/{id}" , f"Update Collection {id}", method="PUT", json=collection)
     if response:
         indent=2 if pretty else 0 
@@ -658,6 +662,7 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     if collection_id is None or item_id is None:
         click.echo(f"Error None Value in Collection Id ({collection_id}) or Item ID ({item_id})",err=True)
         exit(6)
+    item.update({"collection":collection_id})
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
     if response: 
         indent=2 if pretty else 0 
