@@ -26,7 +26,7 @@ Usage: terrapi stac item queryables [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 

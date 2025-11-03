@@ -26,7 +26,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 
@@ -34,7 +34,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `bbox`:
     * Type: FLOAT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-b
 --bbox`
 
@@ -44,7 +44,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `datetime`:
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-d
 --datetime`
 
@@ -54,7 +54,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `limit`:
     * Type: INT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-l
 --limit`
 
@@ -64,7 +64,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `max`:
     * Type: INT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-m
 --max`
 

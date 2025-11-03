@@ -25,7 +25,7 @@ Usage: terrapi stac item create [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 
@@ -66,7 +66,7 @@ Usage: terrapi stac item create [OPTIONS] COLLECTION_ID
     * Usage: `-u
 --update`
 
-    Update Collection if it allready exists
+    Update Item if it allready exists
 
 
 
@@ -125,7 +125,7 @@ Options:
   -j, --json TEXT      Provide collection as JSON String
   -f, --file FILENAME  Read Collection JSON from File. Specify - to read from
                        pipe
-  -u, --update         Update Collection if it allready exists
+  -u, --update         Update Item if it allready exists
   -p, --pretty         print pretty readable json
   -q, --quiet          Do not print response
   --help               Show this message and exit.

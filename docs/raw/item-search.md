@@ -37,7 +37,7 @@ Usage: terrapi stac item search [OPTIONS]
 
 * `bbox`:
     * Type: FLOAT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-b
 --bbox`
 
@@ -47,7 +47,7 @@ Usage: terrapi stac item search [OPTIONS]
 
 * `datetime`:
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-d
 --datetime`
 
@@ -57,7 +57,7 @@ Usage: terrapi stac item search [OPTIONS]
 
 * `filter_expr`:
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-f
 --filter`
 
@@ -67,7 +67,7 @@ Usage: terrapi stac item search [OPTIONS]
 
 * `limit`:
     * Type: INT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-l
 --limit`
 
@@ -77,7 +77,7 @@ Usage: terrapi stac item search [OPTIONS]
 
 * `max`:
     * Type: INT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-m
 --max`
 

@@ -49,15 +49,19 @@ def construct_url(ctx: dict, path: str) -> str:
     return f"{base_url}/{path}"
 
 
-def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
+def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1,alt_path=None, **kwargs)->dict:
     url=construct_url(ctx,stac_path)
-    return(_get_json_response_from_signed_url(ctx,url, error_desc, method,alt_method,alt_code, **kwargs))
+    if alt_path:
+        alt_url=construct_url(ctx,alt_path)
+    else:
+        alt_url=None
+    return(_get_json_response_from_signed_url(ctx,url, error_desc, method,alt_method,alt_code,alt_url, **kwargs))
 
 
 
 
 
-def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, noAuth: bool=False,**kwargs)->dict:
+def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, alt_url=None,noAuth: bool=False,**kwargs)->dict:
     debugCli =ctx.obj['DEBUG']
     if debugCli:
         click.echo(f" Requesting {error_desc} from {url} using {method} and providing {kwargs}", err=True)
@@ -74,14 +78,18 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         if alt_method and r.status_code == alt_code :
             if debugCli:
                 click.echo(f"Request to {url} using {method} failed with error Code 409. Retrying with  {alt_method}",err=True)
-            if ctx.obj['noAuth']: 
-                r2= requests.request(url=url, method=alt_method, **kwargs)
+            if not alt_url:
+                alt_url=url
+        
+            if ctx.obj['noAuth']:                
+                r2= requests.request(url=alt_url, method=alt_method, **kwargs)
             else:  
-                r2=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
+                r2=wrap_request(requests.sessions.Session(),url=alt_url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
             #if alt request was succesful switch to it
             if 200<=r2.status_code<=299:
                 r=r2
                 method=alt_method
+                url=alt_url
         json_stac={}
         try:
             json_stac=r.json()
