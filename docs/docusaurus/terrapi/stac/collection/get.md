@@ -21,7 +21,7 @@ Usage: terrapi stac collection get [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 

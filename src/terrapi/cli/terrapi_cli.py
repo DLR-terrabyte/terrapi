@@ -3,11 +3,12 @@ from .stac_api_cli import stac
 from .restricted_access_cli import restricted_data
 from ..settings import TERRABYTE_PRIVATE_API_URL, TERRABYTE_CLIENT_ID
 from ..auth.config import RefreshTokenStore
-from .. import __version__  # Import version from __init__.py
+from .._version import __version__
+from .shared_cli import auth, login
 
 
 @click.group(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--debug/--no-debug', default=False, help="Activate verbose outputs for debugging purposes.", hidden=True)
+@click.option('--debug/--no-debug', '-d/-nd', default=False, help="Activate verbose outputs for debugging purposes.", hidden=True)
 @click.version_option(version=__version__, prog_name="terrapi", message="%(prog)s version %(version)s")
 @click.pass_context
 def terrapi(ctx, debug):
@@ -36,7 +37,7 @@ def terrapi(ctx, debug):
         click.echo("Debug mode activated.")
 
 
-@click.command()
+@click.group()
 @click.pass_context
 def slurm(ctx):
     """SLURM REST API (Coming Soon)
@@ -48,11 +49,16 @@ def slurm(ctx):
     if ctx.obj['DEBUG']:
         click.echo("SLURM REST API is not implemented yet.")
 
+slurm.add_command(auth)
+slurm.add_command(login)
+slurm.hidden = True  # Hide the SLURM command until implemented
+
 
 # Add subcommands to the main CLI group
 terrapi.add_command(stac)
 # terrapi.add_command(slurm)  # Uncomment when SLURM is implemented
 terrapi.add_command(restricted_data)
+terrapi.add_command(slurm)
 
 
 if __name__ == '__main__':

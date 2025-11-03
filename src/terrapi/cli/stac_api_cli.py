@@ -49,18 +49,22 @@ def construct_url(ctx: dict, path: str) -> str:
     return f"{base_url}/{path}"
 
 
-def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, **kwargs)->dict:
+def _get_json_response_from_signed_request(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1,alt_path=None, **kwargs)->dict:
     url=construct_url(ctx,stac_path)
-    return(_get_json_response_from_signed_url(ctx,url, error_desc, method,alt_method,alt_code, **kwargs))
+    if alt_path:
+        alt_url=construct_url(ctx,alt_path)
+    else:
+        alt_url=None
+    return(_get_json_response_from_signed_url(ctx,url, error_desc, method,alt_method,alt_code,alt_url, **kwargs))
 
 
 
 
 
-def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, noAuth: bool=False,**kwargs)->dict:
+def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1, alt_url=None,noAuth: bool=False,**kwargs)->dict:
     debugCli =ctx.obj['DEBUG']
     if debugCli:
-        print(f" Requesting {error_desc} from {url} using {method}")
+        click.echo(f" Requesting {error_desc} from {url} using {method} and providing {kwargs}", err=True)
     try:   
         if ctx.obj['noAuth']: 
             r = requests.request(url=url, method=method, **kwargs)
@@ -74,13 +78,18 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         if alt_method and r.status_code == alt_code :
             if debugCli:
                 click.echo(f"Request to {url} using {method} failed with error Code 409. Retrying with  {alt_method}",err=True)
-            if ctx.obj['noAuth']: 
-                r2= requests.request(url=url, method=alt_method, **kwargs)
+            if not alt_url:
+                alt_url=url
+        
+            if ctx.obj['noAuth']:                
+                r2= requests.request(url=alt_url, method=alt_method, **kwargs)
             else:  
-                r2=wrap_request(requests.sessions.Session(),url=url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
+                r2=wrap_request(requests.sessions.Session(),url=alt_url,client_id=ctx.obj['ClientId'],method=alt_method,**kwargs)
             #if alt request was succesful switch to it
             if 200<=r2.status_code<=299:
                 r=r2
+                method=alt_method
+                url=alt_url
         json_stac={}
         try:
             json_stac=r.json()
@@ -95,6 +104,9 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         message=json_stac.get('message', json_stac)
 
         match r.status_code:
+            case 400:
+                click.echo(f"Stac API reported a Bad Request ({r.status_code}) when calling {url}, Message: {message}", err=True)
+                return None
             case 409:
                 click.echo(f"Stac API reported a Conflict ({r.status_code}) while requesting {error_desc} when calling {url}. This can occur when the creation of an existing Collection or Item is requested or when  update is called on a non exiting Collection/Item.",err=True)
                 return None
@@ -120,7 +132,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
         return json_stac
        
     except Exception as e:
-        click.echo(f"Requesting {error_desc} from URL {url} failed")
+        click.echo(f"Requesting {error_desc} from URL {url} with Method {method} failed unexpectedly. Error Description  from Backend was{message}", err=True)
         if debugCli:
             click.echo("Error reported was:")
             click.echo(f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
@@ -302,6 +314,93 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
                 if title or description:
                     outfile.write("\n")
 
+@item.command("search")
+@click.option("-c", "--collection", "collections", type=str, show_default=False,default=None, help="Filter by collection ID(s). Separate multiple IDs with ','")
+@click.option("-b", "--bbox", nargs=4, type=float, help="Filter items by bounding box (xmin, ymin, xmax, ymax).")
+@click.option("-d", "--datetime", type=str, help="Filter items by time range (e.g., 2020-01-01/2020-12-31).")
+@click.option("-f", "--filter", "filter_expr", type=str, help="CQL2-text filter expression.")
+@click.option("-l", "--limit", type=int, help="Limit the number of items returned in a single request.")
+@click.option("-m", "--max", type=int, help="Limit the total number of items returned.")
+@click.option("--all", default=False, is_flag=True, help="Output the full JSON for each item.")
+@click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
+@click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
+@click.option("-a", "--assets", "assetfilter", default=None, type=str, show_default=False, help="Only print specified assets, multiple assets are separated by ','")
+@click.option("-r", "--href-only", default=False, is_flag=True, show_default=False, help="Only print asset hrefs")
+@click.option("-s", "--strip-file", default=False, is_flag=True, show_default=False, help="Remove file prefix from asset hrefs")
+@click.pass_context
+def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit, max, all: bool, pretty: bool, outfile, assetfilter: str = None, href_only: bool = False, strip_file: bool = False):
+    """Search STAC Items across collections.
+
+    Search for items using various filters including spatial, temporal, and custom expressions.
+    The search endpoint allows querying across multiple collections at once.
+
+    Examples:
+    - Search all items: `terrapi stac item search`
+    - Filter by collection: `terrapi stac item search --collection landsat-c2-l2`
+    - Filter by bbox: `terrapi stac item search --bbox -180 -90 180 90`
+    - Filter by time: `terrapi stac item search --datetime "2020-01-01/2020-12-31"`
+    - Use CQL2 filter: `terrapi stac item search --filter "eo:cloud_cover < 10"`
+    """
+    if href_only and all:
+        handle_error(ctx, "Error: Options --all and --href-only cannot be used together.", 1)
+
+    if assetfilter:
+        assetfilter = assetfilter.split(",")
+       
+    # Build search parameters
+    params = {}
+    if collections:
+        collections = collections.split(",") 
+        params['collections'] = collections
+    if max and not limit:
+        limit = max
+    if limit:
+        params['limit'] = min(limit, max) if max else limit
+    if datetime:
+        params['datetime'] = datetime
+    if bbox:
+        validate_bbox_exit_error(bbox)
+        params['bbox'] = list(bbox)
+    if filter_expr:
+        # Note: This assumes the STAC API supports CQL2-text
+        params['filter'] = filter_expr
+        #params['filter-lang'] = 'cql2-text'
+
+    # Use the /search endpoint
+    search_response = _get_json_response_from_signed_request(ctx, "search", "Item Search", method="GET", json=params)
+    
+
+
+    if search_response:
+        items = search_response.get('features', [])
+        indent = 2 if pretty else 0
+        
+        if items:
+            new_items = []
+            if max and len(items) > max:
+                items = items[:max]
+                
+            for item in items:
+                if not (href_only or all):
+                    # Print minimal info: collection/id
+                    collection = item.get('collection', 'unknown')
+                    outfile.write(f"{collection}/{item.get('id')}\n")
+                    continue
+                    
+                new_item, hrefs = _filterItemStripHref(item, href_only, strip_file, assetfilter)
+                if href_only:
+                    for href in hrefs:
+                        outfile.write(f"{href}\n")
+                    continue
+                new_items.append(new_item)
+                
+            if all:
+                outfile.write(json.dumps({
+                    'features': new_items, 
+                    "type": "FeatureCollection",
+                    "numberMatched": search_response.get('numberMatched'),
+                    "numberReturned": len(new_items)
+                }, indent=indent) + "\n")
 
 @item.command("list")
 @click.argument("collection_id", type=str)
@@ -362,6 +461,28 @@ def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bo
             if all:
                 outfile.write(json.dumps({'features': new_items, "type": "FeatureCollection"}, indent=indent) + "\n")
 
+
+@item.command("queryables")
+@click.argument("collection_id", type=str)
+@click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
+@click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
+@click.pass_context
+def get_queryables(ctx: dict, collection_id: str, pretty: bool, outfile):
+    """Get queryable attributes for items in a collection.
+
+    Retrieves the schema of queryable attributes that can be used for filtering items
+    in the specified collection using CQL2 expressions.
+
+    Examples:
+    - Get queryables: `terrapi stac item queryables <collection_id>`
+    - Pretty print: `terrapi stac item queryables <collection_id> --pretty`
+    """
+    path = f"collections/{collection_id}/queryables"
+    queryables = _get_json_response_from_signed_request(ctx, path, f"Queryables for Collection {collection_id}")
+    
+    if queryables:
+        indent = 2 if pretty else 0
+        outfile.write(json.dumps(queryables, indent=indent) + "\n")
 
 @collection.command()
 @click.argument("collection_id")
@@ -440,7 +561,7 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 @click.option("--id","item_id",default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
-@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
+@click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Item if it allready exists')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
 @click.pass_context
@@ -470,6 +591,8 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     else:
         items=item.get("features",None)
         #not possible for featurecollection
+        if update: 
+            handle_error(ctx, "Error: Update is not possible when providing a FeatureCollection with multiple items. Please create items individually if fallback to update is needed", 5)  
         update=False
         if items:
             if item_id:
@@ -491,7 +614,7 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         click.echo(f"Modified JSON to upload is: \n {json.dumps(item)}")
     alt_method=None if not update else "PUT"
     alt_code=409
-    response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items" , f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
+    response=_get_json_response_from_signed_request(ctx=ctx, stac_path=f"collections/{collection_id}/items" , error_desc=f"Create Item {item_id} in Collection {collection_id}", method="POST",alt_method=alt_method,alt_code=alt_code, json=item)
     if response and not quiet:
         ind=2 if pretty else 0
         click.echo(json.dumps(response,indent=ind))
@@ -517,6 +640,7 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = No
         collection['id']=id
     else:
         id=collection.get('id')
+
     response=_get_json_response_from_signed_request(ctx,f"collections/{id}" , f"Update Collection {id}", method="PUT", json=collection)
     if response:
         indent=2 if pretty else 0 
@@ -546,7 +670,8 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     if collection_id is None or item_id is None:
         click.echo(f"Error None Value in Collection Id ({collection_id}) or Item ID ({item_id})",err=True)
         exit(6)
-    response=_get_json_response_from_signed_request(f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
+    item.update({"collection":collection_id})
+    response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
     if response: 
         indent=2 if pretty else 0 
         click.echo(json.dumps(response,indent=indent))

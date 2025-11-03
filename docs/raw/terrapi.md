@@ -28,7 +28,8 @@ Usage: terrapi [OPTIONS] COMMAND [ARGS]...
 * `debug`:
     * Type: BOOL
     * Default: `False`
-    * Usage: `--debug`
+    * Usage: `--debug
+-d`
 
     Activate verbose outputs for debugging purposes.
 

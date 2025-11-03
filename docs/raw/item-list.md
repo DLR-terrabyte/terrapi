@@ -21,7 +21,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 
@@ -29,7 +29,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `bbox`:
     * Type: FLOAT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-b
 --bbox`
 
@@ -39,7 +39,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `datetime`:
     * Type: STRING
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-d
 --datetime`
 
@@ -49,7 +49,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `limit`:
     * Type: INT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-l
 --limit`
 
@@ -59,7 +59,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `max`:
     * Type: INT
-    * Default: `None`
+    * Default: `Sentinel.UNSET`
     * Usage: `-m
 --max`
 
@@ -70,8 +70,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 * `all`:
     * Type: BOOL
     * Default: `False`
-    * Usage: `-a
---all`
+    * Usage: `--all`
 
     Output the full JSON for each item.
 
@@ -159,7 +158,7 @@ Options:
   -l, --limit INTEGER     Limit the number of items returned in a single
                           request.
   -m, --max INTEGER       Limit the total number of items returned.
-  -a, --all               Output the full JSON for each item.
+  --all                   Output the full JSON for each item.
   -p, --pretty            Pretty-print JSON output.
   -o, --outfile FILENAME  Write output to a file instead of stdout.
   -a, --assets TEXT       Only print specified assets, multiple assets are

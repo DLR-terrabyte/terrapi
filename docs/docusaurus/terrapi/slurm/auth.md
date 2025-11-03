@@ -1,10 +1,10 @@
 ---
 id: auth
 title: auth
-description: terrapi command line library documentation - stac subcommand
+description: terrapi command line library documentation - slurm subcommand
 ---
 
-# stac auth
+# slurm auth
 
 Print the single use auth token needed to directly interact with authenticated terrabyte APIs
 
@@ -25,7 +25,7 @@ Bash/Zsh:
 ## Usage
 
 ```
-Usage: terrapi stac auth [OPTIONS]
+Usage: terrapi slurm auth [OPTIONS]
 ```
 
 ## Arguments
@@ -104,7 +104,7 @@ Usage: terrapi stac auth [OPTIONS]
 ## CLI Help
 
 ```
-Usage: terrapi stac auth [OPTIONS]
+Usage: terrapi slurm auth [OPTIONS]
 
   Print the single use auth token needed to directly interact with
   authenticated terrabyte APIs

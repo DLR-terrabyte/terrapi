@@ -134,4 +134,6 @@ dmypy.json
 .doctrees
 
 .vscode
-createDocu.sh~
+*~
+#version managed by setuptools_scm
+src/terrapi/_version.py

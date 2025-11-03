@@ -1,5 +1,5 @@
 
-# restricted-data login
+# slurm login
 
 Interactively login via 2FA Browser redirect to obtain refresh Token for the API. 
 A Valid Refresh token is needed for all the other sub commands.
@@ -12,7 +12,7 @@ Use --decode to view the token's contents after login.
 ## Usage
 
 ```
-Usage: terrapi restricted-data login [OPTIONS]
+Usage: terrapi slurm login [OPTIONS]
 ```
 
 ## Arguments
@@ -100,7 +100,7 @@ Usage: terrapi restricted-data login [OPTIONS]
 ## CLI Help
 
 ```
-Usage: terrapi restricted-data login [OPTIONS]
+Usage: terrapi slurm login [OPTIONS]
 
   Interactively login via 2FA Browser redirect to obtain refresh Token for the
   API.  A Valid Refresh token is needed for all the other sub commands. It is
