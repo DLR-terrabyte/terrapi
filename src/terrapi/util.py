@@ -75,6 +75,16 @@ class Rfc3339:
     def __init__(self, propagate_none: bool = False):
         self._propagate_none = propagate_none
 
+    def datetime_range(self, x:str, sep="/")->str:
+        """
+        Format given date-time range as RFC-3339 date-time strings separated by given separator.
+
+            >>> rfc3339.datetime_range("2020/03/17/12/00/00/2020/03/18/12/00/00")
+            "2020-03-17T12:00:00Z/2020-03-18T12:00:00Z"
+        """
+        start_str, end_str = x.split(sep)
+        return f"{self.datetime(start_str)}{sep}{self.datetime(end_str)}"
+
     def datetime(self, x: Any, *args) -> Union[str, None]:
         """
         Format given date(time)-like object as RFC-3339 datetime string.
