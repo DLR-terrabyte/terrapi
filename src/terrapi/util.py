@@ -75,9 +75,24 @@ class Rfc3339:
     def __init__(self, propagate_none: bool = False):
         self._propagate_none = propagate_none
 
+    def datetime_range(self, x:str, sep="/")->str:
+        """
+        Format given date-time range as RFC-3339 date-time strings separated by given separator.
+
+            >>> rfc3339.datetime_range("2020/03/17/12/00/00/2020/03/18/12/00/00")
+            "2020-03-17T12:00:00Z/2020-03-18T12:00:00Z"
+        """
+        start_str, end_str = x.split(sep)
+        end_date = self.parse_date_or_datetime(end_str)
+        if isinstance(end_date, dt.date):
+            # Make end of day
+            end_date = dt.datetime.combine(end_date,dt.time(23, 59, 59))  
+        return f"{self.datetime(start_str)}{sep}{self.datetime(end_date)}"
+
     def datetime(self, x: Any, *args) -> Union[str, None]:
         """
         Format given date(time)-like object as RFC-3339 datetime string.
+        add option to specify that time should be end of day
         """
         if args:
             return self.datetime((x,) + args)

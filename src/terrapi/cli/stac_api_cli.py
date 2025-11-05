@@ -8,7 +8,7 @@ import requests
 
 
 from ..settings import  TERRABYTE_PUBLIC_API_URL
-
+from ..util import rfc3339
 
 
 from ..adapter import wrap_request
@@ -155,7 +155,6 @@ def _filterItemStripHref(item:dict, href_only:bool=False, strip_file:bool=False,
         new_assets.update({name:asset})
     item.update({'assets':new_assets})
     return item,hrefs
-
 
 
 def _get_valid_prefixes(auth_token):
@@ -357,7 +356,7 @@ def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit
     if limit:
         params['limit'] = min(limit, max) if max else limit
     if datetime:
-        params['datetime'] = datetime
+        params['datetime'] = rfc3339.datetime_range(datetime)
     if bbox:
         validate_bbox_exit_error(bbox)
         params['bbox'] = list(bbox)
@@ -434,9 +433,9 @@ def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bo
     if limit:
         params['limit'] = min(limit, max) if max else limit
     if datetime:
-        params['datetime'] = datetime
+        params['datetime'] = rfc3339.datetime_range(datetime)
     if bbox:
-        validate_bbox_exit_error(bbox)
+        validate_bbox_exit_error(ctx,bbox=bbox)
         params['bbox'] = ','.join(map(str, bbox))
 
     path = f"collections/{collection_id}/items"
