@@ -83,11 +83,16 @@ class Rfc3339:
             "2020-03-17T12:00:00Z/2020-03-18T12:00:00Z"
         """
         start_str, end_str = x.split(sep)
-        return f"{self.datetime(start_str)}{sep}{self.datetime(end_str)}"
+        end_date = self.parse_date_or_datetime(end_str)
+        if isinstance(end_date, dt.date):
+            # Make end of day
+            end_date = dt.datetime.combine(end_date,dt.time(23, 59, 59))  
+        return f"{self.datetime(start_str)}{sep}{self.datetime(end_date)}"
 
     def datetime(self, x: Any, *args) -> Union[str, None]:
         """
         Format given date(time)-like object as RFC-3339 datetime string.
+        add option to specify that time should be end of day
         """
         if args:
             return self.datetime((x,) + args)
