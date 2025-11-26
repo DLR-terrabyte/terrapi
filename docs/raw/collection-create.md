@@ -5,7 +5,11 @@ Create a new STAC Collection
 
 The Collection json can be specfied either from stdin, from a file or as a parameter. 
 
-The Stac Server returns updated version of the Collection 
+The Collection  must follow the STAC Collection specification. 
+
+Mininal STAC Collection requirements are checked before sending the request to the server. 
+
+In case of success the Stac Server returns updated version of the Collection 
 
 
 
@@ -88,7 +92,12 @@ Usage: terrapi stac collection create [OPTIONS]
   The Collection json can be specfied either from stdin, from a file or as a
   parameter.
 
-  The Stac Server returns updated version of the Collection
+  The Collection  must follow the STAC Collection specification.
+
+  Mininal STAC Collection requirements are checked before sending the request
+  to the server.
+
+  In case of success the Stac Server returns updated version of the Collection
 
 Options:
   --id TEXT            ID of the Collection. If specified will overwrite the

@@ -21,7 +21,6 @@ Usage: terrapi stac item update [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 

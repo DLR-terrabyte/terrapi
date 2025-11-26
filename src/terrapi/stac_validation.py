@@ -78,7 +78,7 @@ def validate_stac_extensions(item_or_collection: dict, required_extensions: list
     return True
 
 
-def validate_stac_item_or_collection(item: dict) -> bool:
+def validate_stac_item_or_featurecollection(item: dict) -> bool:
     """Validate if a JSON object conforms to minimal STAC Item or FeatureCollection requirements.
 
     Args:
@@ -177,11 +177,12 @@ def validate_stac_collection(collection: dict) -> bool:
     Returns:
         bool: True if the collection is valid, False otherwise.
     """
-    required_fields = ["type", "id", "extent"]
+    required_fields = ["type", "id", "extent", "license"]
     required_extensions = [
         "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
         "https://stac-extensions.github.io/projection/v1.0.0/schema.json"
     ]
+    required_extensions = []
     errors = []
 
     # Check if all required fields are present

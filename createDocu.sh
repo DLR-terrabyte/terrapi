@@ -16,6 +16,8 @@ cd docs/raw
 #patch documenation that make issues in docusaurus
 sed -i 's#<click.types.File .*>#File#g' *md
 sed -i 's#<ConsoleStream name.*stdout.*>#stdout#g' *md
+sed -i  '/NonClosingTextIOWrapper/c\    * Default: `stdout`' *md
+sed -i '/Sentinel\.UNSET/d' *md
 sed -i 's#<#\\<#g' *md
 sed -i 's#>#\\>#g' *md 
 

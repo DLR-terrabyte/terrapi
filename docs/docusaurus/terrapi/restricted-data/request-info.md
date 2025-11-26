@@ -30,7 +30,6 @@ Usage: terrapi restricted-data request-info [OPTIONS] DATASET
 
 * `dataset` (REQUIRED):
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `dataset`
 
 

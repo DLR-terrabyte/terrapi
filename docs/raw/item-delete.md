@@ -17,13 +17,11 @@ Usage: terrapi stac item delete [OPTIONS] COLLECTION_ID ITEM_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 
 * `item_id` (REQUIRED):
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `item_id`
 
 

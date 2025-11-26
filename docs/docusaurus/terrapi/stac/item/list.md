@@ -26,7 +26,6 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 
@@ -34,17 +33,15 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `bbox`:
     * Type: FLOAT
-    * Default: `Sentinel.UNSET`
     * Usage: `-b
 --bbox`
 
-    Filter items by bounding box (xmin, ymin, xmax, ymax).
+    Filter items by bounding box (xmin ymin xmax ymax).
 
 
 
 * `datetime`:
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `-d
 --datetime`
 
@@ -54,7 +51,6 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `limit`:
     * Type: INT
-    * Default: `Sentinel.UNSET`
     * Usage: `-l
 --limit`
 
@@ -64,7 +60,6 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `max`:
     * Type: INT
-    * Default: `Sentinel.UNSET`
     * Usage: `-m
 --max`
 
@@ -93,7 +88,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 * `outfile`:
     * Type: File
-    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
+    * Default: `stdout`
     * Usage: `-o
 --outfile`
 
@@ -131,6 +126,16 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
 
 
 
+* `coount`:
+    * Type: BOOL
+    * Default: `False`
+    * Usage: `-c
+--coount`
+
+    Only print the Number of items in the bbox and Timerange 
+
+
+
 * `help`:
     * Type: BOOL
     * Default: `False`
@@ -156,8 +161,7 @@ Usage: terrapi stac item list [OPTIONS] COLLECTION_ID
   \<collection_id\> --datetime "2020-01-01/2020-12-31"`
 
 Options:
-  -b, --bbox FLOAT...     Filter items by bounding box (xmin, ymin, xmax,
-                          ymax).
+  -b, --bbox FLOAT...     Filter items by bounding box (xmin ymin xmax ymax).
   -d, --datetime TEXT     Filter items by time range (e.g.,
                           2020-01-01/2020-12-31).
   -l, --limit INTEGER     Limit the number of items returned in a single
@@ -170,6 +174,8 @@ Options:
                           separated by ','
   -r, --href-only         Only print asset hrefs
   -s, --strip-file        Remove file prefix from asset hrefs
+  -c, --coount            Only print the Number of items in the bbox and
+                          Timerange
   --help                  Show this message and exit.
 ```
 

@@ -13,7 +13,7 @@ from ..util import rfc3339
 
 from ..adapter import wrap_request
 from .shared_cli import login, auth, _get_auth_refresh_tokens, _readJson_from_file_or_str
-from ..stac_validation import validate_bbox_exit_error, validate_stac_item_or_collection, validate_stac_item ,handle_error
+from ..stac_validation import validate_bbox_exit_error, validate_stac_item_or_featurecollection, validate_stac_item ,handle_error, validate_stac_collection
 
 def _get_next_url(links)->str|None:
     if links:
@@ -27,7 +27,7 @@ def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_
     if json_stac and json_stac.get("type")=="FeatureCollection":
         nexUrl=_get_next_url(json_stac.get('links'))
         while nexUrl:
-            extra_stac=_get_json_response_from_signed_url(ctx,nexUrl, error_desc, method,alt_method,alt_code, **kwargs)
+            extra_stac=_get_json_response_from_signed_url(ctx,nexUrl, error_desc, method,alt_method,alt_code)
             if extra_stac:
                 nexUrl=_get_next_url(extra_stac.get('links'))
                 if ctx.obj['DEBUG']:
@@ -216,6 +216,9 @@ def stac(ctx: dict, public: bool = False, private_url: str = None, public_url: s
             click.echo(f"Public API URL set to {public_url}")
     else:
         ctx.obj['publicStacUrl'] = TERRABYTE_PUBLIC_API_URL
+    
+    if private_url and public:
+        click.echo(f"Warning: private_url overwritten while switch to public url is active. Still using {ctx.obj['publicStacUrl']}", err=True)
 
     ctx.obj['noAuth'] = public
     if public and ctx.obj['DEBUG']:
@@ -271,8 +274,9 @@ def item(ctx: dict):
 @click.option("-a", "--all", default=False, is_flag=True, help="Output the full JSON for each collection.")
 @click.option("-p", "--pretty", default=False, is_flag=True, help="Pretty-print JSON output.")
 @click.option("-o", "--outfile", type=click.File('w', encoding='utf8'), default=click.get_text_stream('stdout'), help="Write output to a file instead of stdout.")
+@click.option("-c", "--count", default=False, is_flag=True, show_default=False, help="Only print the Number of collections available")
 @click.pass_context
-def list(ctx: dict, outfile, filter: str = "", title: bool = False, description: bool = False, all: bool = False, pretty: bool = False):
+def list(ctx: dict, outfile, filter: str = "", title: bool = False, description: bool = False, all: bool = False, pretty: bool = False, count: bool =False):
     """List STAC Collections.
 
     Retrieve and display metadata for all available STAC collections. You can filter collections by ID, include additional metadata fields, or output the full JSON.
@@ -297,9 +301,16 @@ def list(ctx: dict, outfile, filter: str = "", title: bool = False, description:
     collections = _get_json_response_from_signed_request_paging(ctx, "collections", "Collections")
     if collections:
         collections = collections.get('collections')
+    else :
+        if count:
+            outfile.write("0\n")
+            return
     if collections:
         if filter:
             collections = [collection for collection in collections if re.search(filter, collection.get('id', ""))]
+        if count:
+            outfile.write(f"{len(collections)}\n")
+            return
         if all:
             outfile.write(json.dumps({'collections': collections}, indent=indent))
             outfile.write("\n")
@@ -403,7 +414,7 @@ def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit
 
 @item.command("list")
 @click.argument("collection_id", type=str)
-@click.option("-b", "--bbox", nargs=4, type=float, help="Filter items by bounding box (xmin, ymin, xmax, ymax).")
+@click.option("-b", "--bbox", nargs=4, type=float, help="Filter items by bounding box (xmin ymin xmax ymax).")
 @click.option("-d", "--datetime", type=str, help="Filter items by time range (e.g., 2020-01-01/2020-12-31).")
 @click.option("-l", "--limit", type=int, help="Limit the number of items returned in a single request.")
 @click.option("-m", "--max", type=int, help="Limit the total number of items returned.")
@@ -413,8 +424,9 @@ def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit
 @click.option("-a", "--assets", "assetfilter", default=None, type=str, show_default = False, help="Only print specified assets, multiple assets are separated by ',' ")
 @click.option("-r", "--href-only", default=False, is_flag = True, show_default = False, help="Only print asset hrefs")
 @click.option("-s", "--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
+@click.option("-c", "--coount", default=False, is_flag = True, show_default = False, help="Only print the Number of items in the bbox and Timerange ")  
 @click.pass_context
-def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bool, pretty: bool, outfile,assetfilter:str=None,href_only:bool=False, strip_file:bool=False):
+def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bool, pretty: bool, outfile,assetfilter:str=None,href_only:bool=False, strip_file:bool=False,coount:bool=False):
     """List STAC Items in a Collection.
 
     Retrieve and display metadata for items in a specific collection. You can filter items by spatial and temporal properties, or output the full JSON.
@@ -439,8 +451,14 @@ def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bo
         params['bbox'] = ','.join(map(str, bbox))
 
     path = f"collections/{collection_id}/items"
-    feature_collection = _get_json_response_from_signed_request(ctx, path, f"Items in Collection {collection_id}", params=params)
+    feature_collection = _get_json_response_from_signed_request_paging(ctx, path, f"Items in Collection {collection_id}", params=params,maxElements=max)
+    if(ctx.obj['DEBUG']):
+        click.echo(f"Retrieved Feature Collection:\n {feature_collection}")
     if feature_collection:
+        if coount:
+            numberMatched=len(feature_collection.get('features'))
+            outfile.write(f"{numberMatched}\n")
+            return
         items = feature_collection.get('features', [])
         indent = 2 if pretty else 0
         if items:
@@ -539,13 +557,19 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
     """Create a new STAC Collection 
     
     The Collection json can be specfied either from stdin, from a file or as a parameter. \n
-    The Stac Server returns updated version of the Collection 
+    The Collection  must follow the STAC Collection specification. \n
+    Mininal STAC Collection requirements are checked before sending the request to the server. \n 
+    In case of success the Stac Server returns updated version of the Collection 
 
     """
     if ctx.obj['noAuth']:
       handle_error(ctx,"ERROR! Create is only possible for private stac API. Exiting")
     collection=_readJson_from_file_or_str(json_str,inputfile)
     #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
+
+    if not validate_stac_collection(collection):
+        handle_error(ctx,"Error: Provided Collection JSON is not a valid STAC Collection. Please recheck!",4)
+
     if id:
         collection['id']=id
     else:
@@ -636,6 +660,10 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = No
        click.echo("ERROR! Update is only possible for private stac API. Exiting", err=True)
        exit(3)
     collection=_readJson_from_file_or_str(json_str,inputfile)
+
+    if not validate_stac_collection(collection):
+        handle_error(ctx,"Error: Provided Collection JSON is not a valid STAC Collection. Please recheck!",4)
+
     #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
     if id:
         collection['id']=id

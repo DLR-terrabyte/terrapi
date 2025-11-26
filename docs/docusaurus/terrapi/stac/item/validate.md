@@ -43,7 +43,6 @@ Usage: terrapi stac item validate [OPTIONS]
 
 * `inputfile`:
     * Type: File
-    * Default: `Sentinel.UNSET`
     * Usage: `-f
 --file`
 
@@ -53,7 +52,6 @@ Usage: terrapi stac item validate [OPTIONS]
 
 * `json_str`:
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `-j
 --json`
 

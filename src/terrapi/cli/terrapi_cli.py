@@ -1,3 +1,8 @@
+import sys
+# Force UTF-8 for stdout/stderr
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
 import click
 from .stac_api_cli import stac
 from .restricted_access_cli import restricted_data
@@ -58,8 +63,8 @@ slurm.hidden = True  # Hide the SLURM command until implemented
 terrapi.add_command(stac)
 # terrapi.add_command(slurm)  # Uncomment when SLURM is implemented
 terrapi.add_command(restricted_data)
-terrapi.add_command(slurm)
-
+terrapi.add_command(slurm) 
+slurm.hidden = True  # Hide the SLURM command until implemented
 
 if __name__ == '__main__':
      terrapi(obj={})

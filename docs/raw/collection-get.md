@@ -16,7 +16,6 @@ Usage: terrapi stac collection get [OPTIONS] COLLECTION_ID
 
 * `collection_id` (REQUIRED):
     * Type: STRING
-    * Default: `Sentinel.UNSET`
     * Usage: `collection_id`
 
 
@@ -34,7 +33,7 @@ Usage: terrapi stac collection get [OPTIONS] COLLECTION_ID
 
 * `outfile`:
     * Type: File
-    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
+    * Default: `stdout`
     * Usage: `-o
 --outfile`
 

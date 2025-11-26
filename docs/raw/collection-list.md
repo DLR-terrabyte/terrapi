@@ -74,11 +74,21 @@ Usage: terrapi stac collection list [OPTIONS]
 
 * `outfile`:
     * Type: File
-    * Default: `\<_NonClosingTextIOWrapper name='\<stdout\>' encoding='utf-8'\>`
+    * Default: `stdout`
     * Usage: `-o
 --outfile`
 
     Write output to a file instead of stdout.
+
+
+
+* `count`:
+    * Type: BOOL
+    * Default: `False`
+    * Usage: `-c
+--count`
+
+    Only print the Number of collections available
 
 
 
@@ -113,6 +123,7 @@ Options:
   -a, --all               Output the full JSON for each collection.
   -p, --pretty            Pretty-print JSON output.
   -o, --outfile FILENAME  Write output to a file instead of stdout.
+  -c, --count             Only print the Number of collections available
   --help                  Show this message and exit.
 ```
 
