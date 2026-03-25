@@ -1,33 +1,10 @@
 import re
 import click
-import traceback
 
 
-def handle_error(ctx: dict, message: str, exit_code: int = 1, exception: Exception = None):
-    """Handle errors consistently across the CLI.
-
-    Args:
-        ctx (dict): The Click context object.
-        message (str): The error message to display.
-        exit_code (int): The exit code for the program (default: 1).
-        exception (Exception, optional): The exception object for debugging (default: None).
-    """
-    click.echo(f"Error: {message}", err=True)
-    if ctx.obj.get('DEBUG') and exception:
-        click.echo(f"Debug Info: {type(exception).__name__} at line {exception.__traceback__.tb_lineno} of {__file__}: {exception}", err=True)
-        traceback.print_exc()
-    exit(exit_code)
 
 
-def validate_bbox_exit_error(ctx, bbox: list[float], errorcode: int = 1) -> bool:
-    """Validate the bounding box format."""
-    if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
-        handle_error(ctx, "Error: Invalid bounding box coordinates. xmin must be less than xmax and ymin must be less than ymax.", errorcode)
-        return False
-    if bbox[0] < -180 or bbox[2] > 180 or bbox[1] < -90 or bbox[3] > 90:
-        handle_error(ctx, "Error: Bounding box coordinates must be within the range of [-180, 180] for longitude and [-90, 90] for latitude.", errorcode)
-        return False
-    return True
+
 
 
 # Define the regex for valid IDs (based on pgstac fastapi rules)

@@ -13,12 +13,28 @@ from datetime import datetime, timedelta
 import ast
 import json
 import traceback
-
+import re
 #if needed simple stac maipulation functions
 # https://github.com/EOEPCA/open-science-catalog-builder/blob/main/osc_builder/mystac.py 
 
 
 #helper funtions
+def handle_error(ctx: dict, message: str, exit_code: int = 1, exception: Exception = None):
+    """Handle errors consistently across the CLI.
+
+    Args:
+        ctx (dict): The Click context object.
+        message (str): The error message to display.
+        exit_code (int): The exit code for the program (default: 1).
+        exception (Exception, optional): The exception object for debugging (default: None).
+    """
+    click.echo(f"Error: {message}", err=True)
+    if ctx.obj.get('DEBUG') and exception:
+        click.echo(f"Debug Info: {type(exception).__name__} at line {exception.__traceback__.tb_lineno} of {__file__}: {exception}", err=True)
+        traceback.print_exc()
+    exit(exit_code)
+
+    
 
 
 def _get_device_authenticator(client_id:str, scopes:List[str]=None)->OidcDeviceAuthenticator:
@@ -32,6 +48,8 @@ def _get_device_authenticator(client_id:str, scopes:List[str]=None)->OidcDeviceA
                 ),
                 use_pkce=True,
             )
+
+            
 def _readJson_from_file_or_str(json_str:str = None, inputfile:TextIO = None, debugCli=False) ->dict:
     if (inputfile is None and json_str is None) or (inputfile and json_str):
         click.echo("Error. Either JSON String or JSON File have to be specified. Exiting",err=True)

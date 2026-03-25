@@ -12,8 +12,10 @@ from ..util import rfc3339
 
 
 from ..adapter import wrap_request
-from .shared_cli import login, auth, _get_auth_refresh_tokens, _readJson_from_file_or_str
-from ..stac_validation import validate_bbox_exit_error, validate_stac_item_or_featurecollection, validate_stac_item ,handle_error, validate_stac_collection
+from .shared_cli import login, auth, _get_auth_refresh_tokens, _readJson_from_file_or_str, handle_error
+from ..stac.validate import  validate_stac_item_or_featurecollection, validate_stac_item , validate_stac_collection
+from ..stac.private_api_prefixes import get_valid_private_api_prefixes
+
 
 def _get_next_url(links)->str|None:
     if links:
@@ -21,6 +23,21 @@ def _get_next_url(links)->str|None:
             if link['rel']=='next':
                 return link['href']
     return None
+
+
+
+def validate_bbox_exit_error(ctx, bbox: list[float], errorcode: int = 1) -> bool:
+    """Validate the bounding box format."""
+    if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
+        handle_error(ctx, "Error: Invalid bounding box coordinates. xmin must be less than xmax and ymin must be less than ymax.", errorcode)
+        return False
+    if bbox[0] < -180 or bbox[2] > 180 or bbox[1] < -90 or bbox[3] > 90:
+        handle_error(ctx, "Error: Bounding box coordinates must be within the range of [-180, 180] for longitude and [-90, 90] for latitude.", errorcode)
+        return False
+    return True
+
+
+
 
 def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_desc:str, method="GET",alt_method: str = None,alt_code:int =-1,maxElements=None, **kwargs)->dict:
     json_stac=_get_json_response_from_signed_request(ctx, stac_path, error_desc, method,alt_method,alt_code, **kwargs)
@@ -157,26 +174,6 @@ def _filterItemStripHref(item:dict, href_only:bool=False, strip_file:bool=False,
     return item,hrefs
 
 
-def _get_valid_prefixes(auth_token):
-    decoded = jwt.decode(auth_token, options={"verify_signature": False})
-    rw_prefix = []
-    ro_prefix = []
-    user_id=decoded.get("preferred_username")
-    groups=decoded.get("groups")
-    if groups:
-        for g in groups:
-            if g.startswith("/dss/"):
-                g = g.replace("/dss/","")
-                if "-dss-" in g and not g.endswith("-mgr"):
-                    if g.endswith("-ro"):
-                        ro_prefix.append(g.replace("-ro","."))
-                    else:
-                        rw_prefix.append(g+".") 
-        rw_prefix.sort()
-        ro_prefix.sort()
-    if user_id:
-        rw_prefix.insert(0, user_id+".")
-    return rw_prefix, ro_prefix
 
 
 #end helper function now come the click commands
@@ -516,7 +513,7 @@ def delete(ctx: dict, collection_id:str):
     if not response:
         handle_error(ctx,f"Failed to delete Collection {collection_id}",1)
     returned_id=response.get('deleted collection',None)
-    if returned_id == id:
+    if returned_id == collection_id:
         click.echo(f"Deleted Collection {collection_id}")
 
 
@@ -788,8 +785,10 @@ def get_item(ctx: dict, collection_id: str, item_id: str, outfile, pretty: bool,
 
 
 @collection.command()
+@click.option("-w", "--writable", is_flag=True, default=False, help="List only writable prefixes")
+@click.option("-r", "--readonly", is_flag=True, default=False, help="List only readonly prefixes")
 @click.pass_context
-def prefix(ctx:dict):
+def prefix(ctx:dict, writable: bool, readonly: bool):
     """ List all acceptable read/writable prefixes for specific user
     
     The information about the prefixes is extracted from the current refresh token. 
@@ -798,13 +797,19 @@ def prefix(ctx:dict):
     tokens = _get_auth_refresh_tokens(ctx)
     if tokens is None:
         exit(1)
-    rw_prefix,ro_prefix = _get_valid_prefixes(tokens.access_token)
-    if rw_prefix:
-        click.echo("Writable Collection prefixes:")
+    rw_prefix,ro_prefix = get_valid_private_api_prefixes(tokens.access_token)
+    
+    show_all = not (writable or readonly)
+
+    if rw_prefix and (writable or show_all):
+        if show_all:
+            click.echo("Writable Collection prefixes:")
         for p in rw_prefix:
             click.echo(p)
-    if ro_prefix:
-        click.echo("Readonly Collection prefixes:")
+            
+    if ro_prefix and (readonly or show_all):
+        if show_all:
+            click.echo("Readonly Collection prefixes:")
         for p in ro_prefix:
             click.echo(p)
 

@@ -59,7 +59,7 @@ class RequestsAdapter:
 
 def create_requests_adapter(
     client_id: str = TERRABYTE_CLIENT_ID, issuer: str = TERRABYTE_AUTH_URL
-):
+)->RequestsAdapter:
     return RequestsAdapter(
         OidcDeviceAuthenticator(
             OidcClientInfo(
@@ -73,7 +73,7 @@ def create_requests_adapter(
     )
 
 
-def wrap_request(session: requests.Session, url: str,client_id: str=TERRABYTE_CLIENT_ID, *args, **kwargs):
+def wrap_request(session: requests.Session, url: str,client_id: str=TERRABYTE_CLIENT_ID, *args, **kwargs)->requests.Response:
     session = requests.Session()
     request = requests.Request(url=url, *args, **kwargs)
     adapter = create_requests_adapter(
