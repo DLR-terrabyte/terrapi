@@ -1,0 +1,28 @@
+ich hab mir halt einfach immer collections und items erzeugt
+ 
+Hier ist im Moment die neue STAC API (public and private zusammen)
+https://stac-k8s.terrabyte.lrz.de/stac/
+
+https://stac-k8s.terrabyte.lrz.de/browser/
+ 
+und da kann man auch schon rein schreiben?
+ 
+ah ja sehr schön
+ 
+ja, das sollte funktionieren. 
+ 
+da sieht man jetzt sogar die api description
+ 
+Man muss sich das Token aber über unseren föderierten Keycloak holen: 
+https://iam.terrabyte.lrz.de/realms/eoepca/.well-known/openid-configuration 
+client-id: eoapi
+ 
+Aber wir testen gerade noch die Performance und Skalierung. Für die 10 Mio NRB-Items passt es noch nicht. 
+ 
+ja top, dann würde ich das wahrscheinlich am Donnerstag auch mal testen mit private stac api
+ 
+ja, das wäre super. 
+ 
+Die Regeln sind hier zu finden: 
+https://gitlab-ce.lrz.de/terrabyte/argocd/-/blob/main/cluster/prod/eoepca/data-access/parts/stac-auth-proxy/eoepca_filters.py?ref_type=heads 
+ 

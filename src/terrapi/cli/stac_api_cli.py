@@ -13,8 +13,9 @@ from ..util import rfc3339
 
 from ..adapter import wrap_request
 from .shared_cli import login, auth, _get_auth_refresh_tokens, _readJson_from_file_or_str, handle_error
-from ..stac.validate import  validate_stac_item_or_featurecollection, validate_stac_item , validate_stac_collection
-from ..stac.private_api_prefixes import get_valid_private_api_prefixes
+from ..private.stac import validate_item, validate_collection
+from ..private.stac import get_valid_prefixes
+from ..private.stac import update_mandatory_fields
 
 
 def _get_next_url(links)->str|None:
@@ -549,8 +550,9 @@ def delete_item(ctx: dict, collection_id:str, item_id:str):
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Collection if it allready exists')
 @click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
+@click.option("--force", is_flag=True, default=False, hidden=True, help="Bypass validation")
 @click.pass_context
-def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False ,quiet: bool =False )->None:
+def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False ,quiet: bool =False, force: bool = False )->None:
     """Create a new STAC Collection 
     
     The Collection json can be specfied either from stdin, from a file or as a parameter. \n
@@ -562,15 +564,19 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
     if ctx.obj['noAuth']:
       handle_error(ctx,"ERROR! Create is only possible for private stac API. Exiting")
     collection=_readJson_from_file_or_str(json_str,inputfile)
-    #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
 
-    if not validate_stac_collection(collection):
+    tokens = _get_auth_refresh_tokens(ctx)
+    if tokens:
+        update_mandatory_fields(collection, tokens.access_token)
+
+    if not force and not validate_collection(collection):
         handle_error(ctx,"Error: Provided Collection JSON is not a valid STAC Collection. Please recheck!",4)
 
     if id:
         collection['id']=id
     else:
         id=collection.get('id')
+
     alt_method=None if not update else "PUT"
     response=_get_json_response_from_signed_request(ctx,"collections" , f"Create Collection {id}", method="POST",alt_method=alt_method,alt_code=409, json=collection)
     if response and not quiet:
@@ -584,8 +590,10 @@ def create(ctx: dict, id: str = None, json_str: str = None, inputfile:TextIO = N
 @click.option("-u", "--update",default=False, is_flag = True, show_default = False,help='Update Item if it allready exists')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-q", "--quiet",default=False, is_flag = True, show_default = False,help='Do not print response')
+@click.option("--skip-asset-validation", is_flag=True, default=False, help="Skip asset URL prefix validation")
+@click.option("--force", is_flag=True, default=False, hidden=True, help="Bypass all validation")
 @click.pass_context
-def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False, quiet: bool =False  )->None:
+def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None,update: bool = False, pretty:bool =False, quiet: bool =False, skip_asset_validation:bool=False, force:bool=False):
     """Create new Item(s) in specified Collection 
     
     The Item  json can be specfied either from stdin, from a file or as a parameter. \n
@@ -598,7 +606,6 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
     if ctx.obj['noAuth']:
        handle_error(ctx,"ERROR! Create is only possible for private stac API. Exiting")
     item=_readJson_from_file_or_str(json_str,inputfile)
-    #toDo maybe add some checks for ID and if has minimum STAC Collection requirements
     #distinquish between single item and 
     if item.get("type","") == "Feature":
         if item_id:
@@ -630,8 +637,15 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         else:
             handle_error(ctx, f"Error Expected a Feature Collection but did not find the features list. \n JSON was: {item}",8)
         item_id="Feature Collection"
-    if(ctx.obj["DEBUG"]):
-        click.echo(f"Modified JSON to upload is: \n {json.dumps(item)}")
+
+    tokens = _get_auth_refresh_tokens(ctx)
+    if tokens:
+        update_mandatory_fields(item, tokens.access_token)
+
+    if not force:
+        if not validate_item(item, auth_token=tokens.access_token if tokens else None, skip_asset_validation=skip_asset_validation):
+             handle_error(ctx, "Error: Provided Item JSON is not a valid STAC Item. Please recheck!", 6)
+
     alt_method=None if not update else "PUT"
     alt_path=None if not update else f"collections/{collection_id}/items/{item_id}"
     alt_code=409
@@ -647,8 +661,9 @@ def create_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
+@click.option("--force", is_flag=True, default=False, hidden=True, help="Bypass validation")
 @click.pass_context
-def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
+def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False, force:bool=False):
     """Update an existing Collection
     
     The Collection json can be specfied either from stdin, from a file or as a parameter. 
@@ -658,14 +673,17 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = No
        exit(3)
     collection=_readJson_from_file_or_str(json_str,inputfile)
 
-    if not validate_stac_collection(collection):
-        handle_error(ctx,"Error: Provided Collection JSON is not a valid STAC Collection. Please recheck!",4)
-
-    #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
     if id:
         collection['id']=id
     else:
         id=collection.get('id')
+
+    tokens = _get_auth_refresh_tokens(ctx)
+    if tokens:
+        update_mandatory_fields(collection, tokens.access_token)
+    
+    if not force and not validate_collection(collection):
+        handle_error(ctx,"Error: Provided Collection JSON is not a valid STAC Collection. Please recheck!",4)
 
     response=_get_json_response_from_signed_request(ctx,f"collections/{id}" , f"Update Collection {id}", method="PUT", json=collection)
     if response:
@@ -678,8 +696,11 @@ def update(ctx: dict,id: str = None, json_str: str = None, inputfile:TextIO = No
 @click.option("-j","--json","json_str",default=None, type=str, help="Provide collection as JSON String")
 @click.option("-p", "--pretty", default=False, is_flag = True, show_default = False, help="print pretty readable json")
 @click.option("-f", "--file","inputfile",default=None,type=click.File('r', encoding='utf8'), help='Read Collection JSON from File. Specify - to read from pipe')
+@click.option("--skip-asset-validation", is_flag=True, default=False, help="Skip asset URL prefix validation")
+@click.option("--force", is_flag=True, default=False, hidden=True, help="Bypass all validation")
 @click.pass_context
-def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False):
+def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str = None, inputfile:TextIO = None, pretty:bool =False,
+                skip_asset_validation:bool=False, force:bool=False):
     """Update an existing Item 
     
     The Item  json can be specfied either from stdin, from a file or as a parameter.
@@ -688,7 +709,6 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
        handle_error(ctx,"ERROR! Update is only possible for private stac API. Exiting", exit_code=3)
 
     item=_readJson_from_file_or_str(json_str,inputfile)
-    #toDo maybe add some checks for ID and if has minimum STAC Collection requirements 
     if item_id:
         item['id']=item_id
     else:
@@ -697,6 +717,15 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         click.echo(f"Error None Value in Collection Id ({collection_id}) or Item ID ({item_id})",err=True)
         exit(6)
     item.update({"collection":collection_id})
+
+    tokens = _get_auth_refresh_tokens(ctx)
+    if tokens:
+        update_mandatory_fields(item, tokens.access_token)
+    
+    if not force:
+        if not validate_item(item, auth_token=tokens.access_token if tokens else None, skip_asset_validation=skip_asset_validation):
+            handle_error(ctx, "Error: Provided Item JSON is not a valid STAC Item. Please recheck!", 6)
+
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}/items/{item_id}" , f"Updating Item {item_id} in Collection {collection_id}", method="PUT", json=item)
     if response: 
         indent=2 if pretty else 0 
@@ -707,32 +736,33 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
 @click.option("-i","item_id", default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-f", "--file", "inputfile", type=click.File('r', encoding='utf8'), help='Read Item JSON from File. Specify - to read from pipe') 
 @click.option("-j", "--json", "json_str", type=str, help="Provide item as JSON String")
+@click.option("--skip-asset-validation", is_flag=True, default=False, help="Skip asset URL prefix validation")
 @click.pass_context
-def validate_item(ctx: dict, collection_id: str, item_id: str, inputfile: TextIO = None, json_str: str = None):
+def validate_item_cli(ctx: dict, collection_id: str, item_id: str, inputfile: TextIO = None, json_str: str = None, skip_asset_validation: bool = False):
     """Validate a STAC Item.
 
     This command validates the structure and content of a STAC Item against the STAC specification.
     The `validate_stac_item` function ensures that the provided item adheres to the required schema and standards.
     """
 
-    success, errors = validate_stac_item(item)
-    if not success:
-        click.echo("Validation failed. The item is not valid.", err=True)
-        if errors:
-            click.echo("Validation Errors:", err=True)
-            for error in errors:
-                click.echo(f"- {error}", err=True)
-        ctx.exit(1)
-    click.echo("Congratulations! The item is valid.")
+    item = _readJson_from_file_or_str(json_str, inputfile)
+    if not item:
+        handle_error(ctx, "Error: Could not read Item JSON.", 5)
+
     if item_id:
-        item['id']=item_id
+        item['id'] = item_id
     if collection_id:
-        item['collection']=collection_id
-    success= validate_stac_item(item)
-    if not success:
-        click.echo("Validation failed. The item is not valid.", err=True)
+        item['collection'] = collection_id
+
+    tokens = _get_auth_refresh_tokens(ctx)
+    if tokens:
+        update_mandatory_fields(item, tokens.access_token)
+
+    if not validate_item(item, auth_token=tokens.access_token if tokens else None, skip_asset_validation=skip_asset_validation):
+        click.echo("Validation failed. The item is not a valid STAC Item.", err=True)
         ctx.exit(1)
-    click.echo("Congratulations Item is valid.")
+    
+    click.echo("Success! The STAC Item metadata is valid (with potential best practice warnings above).")
     
 @collection.command()
 @click.argument("collection_id", type=str)
@@ -797,7 +827,7 @@ def prefix(ctx:dict, writable: bool, readonly: bool):
     tokens = _get_auth_refresh_tokens(ctx)
     if tokens is None:
         exit(1)
-    rw_prefix,ro_prefix = get_valid_private_api_prefixes(tokens.access_token)
+    rw_prefix,ro_prefix = get_valid_prefixes(tokens.access_token)
     
     show_all = not (writable or readonly)
 

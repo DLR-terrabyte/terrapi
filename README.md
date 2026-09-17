@@ -61,6 +61,9 @@ Following commands are available for `terrapi stac`
 - `collection` to interact with STAC collections
 - `item` to interact with STAC items
 
+#### STAC Best Practices
+When creating or updating items or collections in the private STAC API, we automatically enrich your metadata (contacts, timestamps) and perform validation against ODC-STAC best practices. For more details and examples, see the [STAC Best Practice Guide](stac_best_practice.md).
+
 ### Restricted Data Usage
 
 Following commands are available for `terrapi restricted_data`:
