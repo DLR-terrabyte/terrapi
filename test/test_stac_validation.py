@@ -104,7 +104,7 @@ def test_update_mandatory_fields():
     assert updated["properties"]["contacts"][0]["name"] == "testuser"
     assert "created" in updated["properties"]
     assert "updated" in updated["properties"]
-    assert "https://stac-extensions.github.io/contacts/v0.1.1/schema.json" in updated["stac_extensions"]
+    assert "https://stac-extensions.github.io/contacts/v1.0.0/schema.json" in updated["stac_extensions"]
 
 def test_validate_collection():
     """Test basic STAC Collection validation."""
@@ -124,5 +124,32 @@ def test_validate_collection():
     assert validate_collection(collection) is False
     
     # Add contacts
-    collection["stac_extensions"] = ["https://stac-extensions.github.io/contacts/v0.1.1/schema.json"]
+    collection["stac_extensions"] = ["https://stac-extensions.github.io/contacts/v1.0.0/schema.json"]
     assert validate_collection(collection) is True
+
+def test_older_extension_version_warning(capsys):
+    """Test that a warning is issued if an extension version is older than the recommended version."""
+    item = {
+        "stac_version": "1.0.0",
+        "type": "Feature",
+        "id": "test-item-older-ext",
+        "geometry": {"type": "Point", "coordinates": [0, 0]},
+        "bbox": [0, 0, 0, 0],
+        "properties": {
+            "datetime": "2023-01-01T00:00:00Z",
+            "contacts": [{"roles": ["contact"]}]
+        },
+        "stac_extensions": [
+            "https://stac-extensions.github.io/contacts/v0.1.1/schema.json",
+            "https://stac-extensions.github.io/raster/v1.1.0/schema.json"
+        ],
+        "assets": {
+            "data": {"href": "https://example.com/data.tif"}
+        }
+    }
+    assert validate_item(item) is True
+    captured = capsys.readouterr()
+    assert "STAC Item Best Practice Warnings" in captured.err
+    assert "STAC extension 'contacts' version '0.1.1' is older than recommended version '1.0.0'" in captured.err
+    assert "STAC extension 'raster' version '1.1.0' is older than recommended version '2.0.0'" in captured.err
+

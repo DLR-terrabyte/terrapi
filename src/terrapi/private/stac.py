@@ -8,6 +8,59 @@ from ..util import rfc3339
 # Define the regex for valid IDs (based on pgstac fastapi rules)
 VALID_ID_REGEX = r"^[a-zA-Z0-9_\-\.]{1,255}$"
 
+# Latest STAC Extension versions
+LATEST_EXTENSIONS = {
+    "contacts": "https://stac-extensions.github.io/contacts/v1.0.0/schema.json",
+    "raster": "https://stac-extensions.github.io/raster/v2.0.0/schema.json",
+    "projection": "https://stac-extensions.github.io/projection/v2.0.0/schema.json",
+    "eo": "https://stac-extensions.github.io/eo/v2.0.0/schema.json",
+}
+
+REQUIRED_EXTENSIONS = [
+    LATEST_EXTENSIONS["contacts"]
+]
+
+RECOMMENDED_EXTENSIONS = [
+    LATEST_EXTENSIONS["raster"],
+    LATEST_EXTENSIONS["projection"],
+    LATEST_EXTENSIONS["eo"]
+]
+
+def parse_extension_info(ext_url: str):
+    """Extract (extension_name, version_string) from a STAC extension schema URL."""
+    if not isinstance(ext_url, str):
+        return None, None
+    match = re.search(r"stac-extensions\.github\.io/([^/]+)/v?([^/]+)", ext_url)
+    if match:
+        return match.group(1), match.group(2)
+    return None, None
+
+def parse_version_tuple(ver_str: str):
+    """Parse version string into a tuple of integers for comparison."""
+    clean_ver = ver_str.lstrip("v")
+    parts = re.findall(r"\d+", clean_ver)
+    return tuple(int(p) for p in parts) if parts else (0,)
+
+def is_version_older(current_ver: str, latest_ver: str) -> bool:
+    """Return True if current_ver is strictly older than latest_ver."""
+    return parse_version_tuple(current_ver) < parse_version_tuple(latest_ver)
+
+def check_extension_versions(stac_extensions: list) -> list[str]:
+    """Return list of warning strings for any stac_extensions using an older version."""
+    warnings = []
+    if not isinstance(stac_extensions, list):
+        return warnings
+    for ext_url in stac_extensions:
+        ext_name, current_ver = parse_extension_info(ext_url)
+        if ext_name and ext_name in LATEST_EXTENSIONS:
+            latest_url = LATEST_EXTENSIONS[ext_name]
+            _, latest_ver = parse_extension_info(latest_url)
+            if current_ver and latest_ver and is_version_older(current_ver, latest_ver):
+                warnings.append(
+                    f"Best Practice: STAC extension '{ext_name}' version '{current_ver}' is older than recommended version '{latest_ver}' ({latest_url})."
+                )
+    return warnings
+
 def validate_id(id_value: str, id_type: str = "ID") -> bool:
     """Validate if an ID conforms to pgstac fastapi restrictions."""
     if not re.match(VALID_ID_REGEX, id_value):
@@ -23,9 +76,19 @@ def validate_extensions(item_or_collection: dict, required_extensions: list) -> 
     if not isinstance(extensions, list):
         errors.append("Invalid 'stac_extensions': Must be a list.")
     else:
-        for ext in required_extensions:
-            if ext not in extensions:
-                errors.append(f"Missing required STAC extension: {ext}")
+        for req_ext in required_extensions:
+            req_name, _ = parse_extension_info(req_ext)
+            found = False
+            for ext in extensions:
+                if ext == req_ext:
+                    found = True
+                    break
+                ext_name, _ = parse_extension_info(ext)
+                if req_name and ext_name == req_name:
+                    found = True
+                    break
+            if not found:
+                errors.append(f"Missing required STAC extension: {req_ext}")
 
     if errors:
         click.echo("STAC Extensions validation failed with the following errors:", err=True)
@@ -57,15 +120,9 @@ def validate_item(item: dict, auth_token: str = None, decoded_token: dict = None
     # Validate as single STAC Item
     required_fields = ["stac_version", "type", "id", "geometry", "bbox", "properties", "assets"]
     # Terrabyte required extensions
-    required_extensions = [
-        "https://stac-extensions.github.io/contacts/v0.1.1/schema.json"
-    ]
+    required_extensions = REQUIRED_EXTENSIONS
     # ODC STAC recommended extensions
-    recommended_extensions = [
-        "https://stac-extensions.github.io/raster/v1.1.0/schema.json",
-        "https://stac-extensions.github.io/projection/v1.0.0/schema.json",
-        "https://stac-extensions.github.io/eo/v1.1.0/schema.json"
-    ]
+    recommended_extensions = RECOMMENDED_EXTENSIONS
     errors = []
     warnings = []
 
@@ -138,15 +195,34 @@ def validate_item(item: dict, auth_token: str = None, decoded_token: dict = None
     stac_extensions = item.get("stac_extensions", [])
     
     # Check for recommended extensions
-    for ext in recommended_extensions:
-        if ext not in stac_extensions:
-            warnings.append(f"Best Practice: Missing recommended STAC extension: {ext}")
+    for rec_ext in recommended_extensions:
+        rec_name, _ = parse_extension_info(rec_ext)
+        found = False
+        for ext in stac_extensions:
+            if ext == rec_ext:
+                found = True
+                break
+            ext_name, _ = parse_extension_info(ext)
+            if rec_name and ext_name == rec_name:
+                found = True
+                break
+        if not found:
+            warnings.append(f"Best Practice: Missing recommended STAC extension: {rec_ext}")
+
+    # Check for older extension versions
+    warnings.extend(check_extension_versions(stac_extensions))
 
     assets = item.get("assets", {})
     if isinstance(assets, dict):
+        has_raster = any(parse_extension_info(ext)[0] == "raster" for ext in stac_extensions if isinstance(ext, str))
+        has_proj = any(parse_extension_info(ext)[0] == "projection" for ext in stac_extensions if isinstance(ext, str))
+        has_eo = any(parse_extension_info(ext)[0] == "eo" for ext in stac_extensions if isinstance(ext, str))
+
         for asset_key, asset_val in assets.items():
+            if not isinstance(asset_val, dict):
+                continue
             # Raster best practices
-            if "https://stac-extensions.github.io/raster/v1.1.0/schema.json" in stac_extensions:
+            if has_raster:
                 raster_bands = asset_val.get("raster:bands", [])
                 if not raster_bands:
                     warnings.append(f"Best Practice: Asset '{asset_key}' is missing 'raster:bands' while using raster extension.")
@@ -158,13 +234,13 @@ def validate_item(item: dict, auth_token: str = None, decoded_token: dict = None
                             warnings.append(f"Best Practice: Asset '{asset_key}' band {i} is missing 'nodata'.")
 
             # Projection best practices
-            if "https://stac-extensions.github.io/projection/v1.0.0/schema.json" in stac_extensions:
+            if has_proj:
                 for field in ["proj:epsg", "proj:shape", "proj:transform"]:
                     if field not in asset_val and field not in item.get("properties", {}):
                         warnings.append(f"Best Practice: Missing '{field}' for asset '{asset_key}' (or in item properties).")
 
             # EO best practices
-            if "https://stac-extensions.github.io/eo/v1.1.0/schema.json" in stac_extensions:
+            if has_eo:
                 eo_bands = asset_val.get("eo:bands", [])
                 if not eo_bands:
                     warnings.append(f"Best Practice: Asset '{asset_key}' is missing 'eo:bands' while using eo extension.")
@@ -188,9 +264,7 @@ def validate_item(item: dict, auth_token: str = None, decoded_token: dict = None
 def validate_collection(collection: dict) -> bool:
     """Validate if a JSON object conforms to minimal STAC Collection requirements."""
     required_fields = ["stac_version", "type", "id", "extent", "license", "description"]
-    required_extensions = [
-        "https://stac-extensions.github.io/contacts/v0.1.1/schema.json"
-    ]
+    required_extensions = REQUIRED_EXTENSIONS
     errors = []
     warnings = []
 
@@ -212,6 +286,8 @@ def validate_collection(collection: dict) -> bool:
         errors.append("Missing required STAC extensions.")
 
     # --- Best Practice Checks (Warnings) ---
+    stac_extensions = collection.get("stac_extensions", [])
+    warnings.extend(check_extension_versions(stac_extensions))
 
     if warnings:
         click.echo("STAC Collection Best Practice Warnings:", err=True)
@@ -281,9 +357,17 @@ def update_mandatory_fields(item: dict, auth_token: str = None, allways_set_crea
     if "stac_extensions" not in item:
         item["stac_extensions"] = []
 
-    # Add Contacts Extension if missing
-    contact_ext = "https://stac-extensions.github.io/contacts/v0.1.1/schema.json"
-    if contact_ext not in item["stac_extensions"]:
+    # Add Contacts Extension if missing or update older version
+    contact_ext = LATEST_EXTENSIONS["contacts"]
+    has_contacts = False
+    for i, ext in enumerate(item["stac_extensions"]):
+        name, ver = parse_extension_info(ext)
+        if name == "contacts" or ext == contact_ext:
+            has_contacts = True
+            if ext != contact_ext:
+                item["stac_extensions"][i] = contact_ext
+            break
+    if not has_contacts:
         item["stac_extensions"].append(contact_ext)
 
     # Set contacts information
@@ -306,3 +390,4 @@ def update_mandatory_fields(item: dict, auth_token: str = None, allways_set_crea
         target["created"] = now
 
     return item
+

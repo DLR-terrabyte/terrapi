@@ -7,9 +7,9 @@ To ensure consistency and provide contact information for all geospatial data in
 When you use the `terrapi stac` commands to create or update STAC objects, the following fields are automatically populated using information from your authentication token (JWT) and the current system time.
 
 ### 1. Contacts Extension
-The project adheres to the [STAC Contacts Extension (v0.1.1)](https://github.com/stac-extensions/contacts).
+The project adheres to the [STAC Contacts Extension (v1.0.0)](https://github.com/stac-extensions/contacts).
 - **Field**: `stac_extensions`
-- **Value**: Adds `https://stac-extensions.github.io/contacts/v0.1.1/schema.json` to the list of extensions.
+- **Value**: Adds `https://stac-extensions.github.io/contacts/v1.0.0/schema.json` to the list of extensions.
 
 ### 2. Contact Information
 Your user information is automatically added as a contact.
@@ -36,7 +36,7 @@ For single items, these fields are added within the `properties` dictionary.
   "type": "Feature",
   "id": "my-item-id",
   "stac_extensions": [
-    "https://stac-extensions.github.io/contacts/v0.1.1/schema.json"
+    "https://stac-extensions.github.io/contacts/v1.0.0/schema.json"
   ],
   "properties": {
     "contacts": [
@@ -61,7 +61,7 @@ For collections, these fields are added at the **top level**.
   "type": "Collection",
   "id": "my-collection-id",
   "stac_extensions": [
-    "https://stac-extensions.github.io/contacts/v0.1.1/schema.json"
+    "https://stac-extensions.github.io/contacts/v1.0.0/schema.json"
   ],
   "contacts": [
     {
