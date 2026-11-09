@@ -120,6 +120,8 @@ def _get_auth_refresh_tokens(ctx:dict, noninteractive:bool=False, force_renew: b
            if noninteractive:
                return None
     if refresh_token is None:
+        if noninteractive:
+            return None
         try:
             tokens = auth.get_tokens(True)
             if debugCli:
@@ -217,7 +219,7 @@ def auth(ctx: dict, wget: bool = False, gdal: bool = False, curl: bool = False, 
 @click.option("-t","--till", type=click.DateTime(), default=None, help="Date the Refresh token needs be valid. Will refresh Token if it expires earlier")
 @click.option("--decode", is_flag=True, show_default=False, default=False, help="Decode and display token contents")
 @click.pass_context
-def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: datetime = datetime.now(), valid: bool = False, decode: bool = False):
+def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, hours: int = 0, till: datetime = None, valid: bool = False, decode: bool = False):
     """Interactively login via 2FA Browser redirect to obtain refresh Token for the API. 
     A Valid Refresh token is needed for all the other sub commands.
     It is recommended to call this function first to make sure you have a valid token for the remainder of your job.
@@ -229,7 +231,7 @@ def login(ctx: dict, force: bool = False, delete: bool = False, days: int = 0, h
         click.echo(f"Till is: {till}, force is {force}, valid is {valid}, delete is {delete}, days is {days}, hours is {hours}")
     stac_issuer = _get_issuer(ctx.obj['privateAPIUrl'])
     validTill = datetime.now() + timedelta(hours=hours, days=days)
-    if till:
+    if till is not None:
         validTill = max(till, validTill)
    
     if ctx.obj['DEBUG']:

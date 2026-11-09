@@ -137,3 +137,4 @@ dmypy.json
 *~
 #version managed by setuptools_scm
 src/terrapi/_version.py
+AGENTS.md

@@ -45,19 +45,26 @@ def _get_json_response_from_signed_request_paging(ctx:dict,stac_path:str, error_
     if json_stac and json_stac.get("type")=="FeatureCollection":
         nexUrl=_get_next_url(json_stac.get('links'))
         while nexUrl:
+            if maxElements and len(json_stac.get('features', [])) >= maxElements:
+                break
             extra_stac=_get_json_response_from_signed_url(ctx,nexUrl, error_desc, method,alt_method,alt_code)
             if extra_stac:
                 nexUrl=_get_next_url(extra_stac.get('links'))
                 if ctx.obj['DEBUG']:
                     click.echo(f"nextURL is {nexUrl}")
-                json_stac['features'].extend(extra_stac.get('features', None))
-                json_stac['context']['limit']+=extra_stac['context']['limit']
-                if maxElements:
-                    if json_stac['context']['limit']>=maxElements:
-                        nexUrl=None
+                extra_features = extra_stac.get('features', [])
+                if extra_features:
+                    json_stac['features'].extend(extra_features)
+                if 'context' in json_stac and isinstance(json_stac['context'], dict) and 'context' in extra_stac and isinstance(extra_stac['context'], dict):
+                    if 'limit' in json_stac['context'] and 'limit' in extra_stac['context']:
+                        json_stac['context']['limit'] += extra_stac['context']['limit']
+                    if 'returned' in json_stac['context'] and 'returned' in extra_stac['context']:
+                        json_stac['context']['returned'] += extra_stac['context']['returned']
+                if maxElements and len(json_stac.get('features', [])) >= maxElements:
+                    nexUrl=None
             else:
                 nexUrl=None
-        #remove next ling as we iterated over next links to download all items
+        #remove next link as we iterated over next links to download all items
         json_stac['links']=[link for link in json_stac['links'] if link['rel']!='next']
     return json_stac
 
@@ -83,6 +90,7 @@ def _get_json_response_from_signed_url(ctx:dict,url:str, error_desc:str, method=
     debugCli =ctx.obj['DEBUG']
     if debugCli:
         click.echo(f" Requesting {error_desc} from {url} using {method} and providing {kwargs}", err=True)
+    message = ""
     try:   
         if ctx.obj['noAuth']: 
             r = requests.request(url=url, method=method, **kwargs)
@@ -367,7 +375,7 @@ def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit
     if datetime:
         params['datetime'] = rfc3339.datetime_range(datetime)
     if bbox:
-        validate_bbox_exit_error(bbox)
+        validate_bbox_exit_error(ctx, bbox=list(bbox))
         params['bbox'] = list(bbox)
     if filter_expr:
         # Note: This assumes the STAC API supports CQL2-text
@@ -422,9 +430,9 @@ def search_items(ctx: dict, collections: str, bbox, datetime, filter_expr, limit
 @click.option("-a", "--assets", "assetfilter", default=None, type=str, show_default = False, help="Only print specified assets, multiple assets are separated by ',' ")
 @click.option("-r", "--href-only", default=False, is_flag = True, show_default = False, help="Only print asset hrefs")
 @click.option("-s", "--strip-file", default=False, is_flag = True, show_default = False, help="Remove file prefix from asset hrefs")
-@click.option("-c", "--coount", default=False, is_flag = True, show_default = False, help="Only print the Number of items in the bbox and Timerange ")  
+@click.option("-c", "--count", default=False, is_flag = True, show_default = False, help="Only print the Number of items in the bbox and Timerange ")  
 @click.pass_context
-def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bool, pretty: bool, outfile,assetfilter:str=None,href_only:bool=False, strip_file:bool=False,coount:bool=False):
+def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bool, pretty: bool, outfile,assetfilter:str=None,href_only:bool=False, strip_file:bool=False,count:bool=False):
     """List STAC Items in a Collection.
 
     Retrieve and display metadata for items in a specific collection. You can filter items by spatial and temporal properties, or output the full JSON.
@@ -453,7 +461,7 @@ def list_item(ctx: dict, collection_id: str, bbox, datetime, limit, max, all: bo
     if(ctx.obj['DEBUG']):
         click.echo(f"Retrieved Feature Collection:\n {feature_collection}")
     if feature_collection:
-        if coount:
+        if count:
             numberMatched=len(feature_collection.get('features'))
             outfile.write(f"{numberMatched}\n")
             return
@@ -509,7 +517,7 @@ def delete(ctx: dict, collection_id:str):
     This will permanently delete the specified collection with all its Items from the private STAC Catalogue. 
     """
     if ctx.obj['noAuth']:
-       handle_error("ERROR! Delete is only possible for private stac API. Exiting", 3)
+       handle_error(ctx, "ERROR! Delete is only possible for private stac API. Exiting", 3)
     response=_get_json_response_from_signed_request(ctx,f"collections/{collection_id}" , f"deletion of {collection_id}", method="DELETE")
     if not response:
         handle_error(ctx,f"Failed to delete Collection {collection_id}",1)
@@ -732,8 +740,8 @@ def update_item(ctx: dict,collection_id:str,item_id: str = None, json_str: str =
         click.echo(json.dumps(response,indent=indent))
       
 @item.command("validate")
-@click.option("-c","collection_id", default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Item JSON")
-@click.option("-i","item_id", default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
+@click.option("-c", "--collection", "collection_id", default=None,type=str, help="ID of the Collection. If specified will overwrite the ID in the Item JSON")
+@click.option("-i", "--item", "item_id", default=None,type=str, help="ID of the Item. If specified will overwrite the ID in the Item JSON")
 @click.option("-f", "--file", "inputfile", type=click.File('r', encoding='utf8'), help='Read Item JSON from File. Specify - to read from pipe') 
 @click.option("-j", "--json", "json_str", type=str, help="Provide item as JSON String")
 @click.option("--skip-asset-validation", is_flag=True, default=False, help="Skip asset URL prefix validation")

@@ -25,15 +25,19 @@ def test_stac_help(runner):
     assert result.exit_code == 0
     assert "Command Line Interface for Terrabyte STAC API" in result.output
 
-def test_login(runner):
-    """Ensure we have valid credentials before running tests."""
-    print("\nChecking for valid credentials...")
+@pytest.fixture(scope="module")
+def require_login(runner):
+    """Ensure we have valid credentials before running live integration tests."""
     result = runner.invoke(terrapi, ['stac', 'auth', '--noninteractive'])
     if result.exit_code != 0:
-        pytest.fail("No valid refresh token found. Please run 'terrapi login' manually before running tests.")
-    assert result.exit_code == 0
+        pytest.skip("No valid refresh token found. Please run 'terrapi login' manually before running live tests.")
+    return True
 
-def test_collection_lifecycle(runner, unique_id, item_id):
+def test_login(runner, require_login):
+    """Ensure we have valid credentials before running tests."""
+    pass
+
+def test_collection_lifecycle(runner, unique_id, item_id, require_login):
     """
     Test the full lifecycle of a STAC Collection and Item:
     1. Create Collection
@@ -148,7 +152,7 @@ def test_collection_lifecycle(runner, unique_id, item_id):
     # Depending on implementation, it might output "Stac API reported a (404)..."
     assert "404" in result.output or result.exit_code != 0 or unique_id not in result.output
 
-def test_prefix_filtering(runner):
+def test_prefix_filtering(runner, require_login):
     """Test the --writable and --readonly flags for the prefix command."""
     # 1. Default (Show All) - Should show headers if prefixes exist
     # We can't guarantee the user has prefixes, but if they do, headers should be there.
@@ -172,7 +176,7 @@ def test_prefix_filtering(runner):
     assert "Writable Collection prefixes:" not in result_r.output
     assert "Readonly Collection prefixes:" not in result_r.output
 
-def test_item_create_flags(runner):
+def test_item_create_flags(runner, require_login):
     """Test various flags for terrapi stac item create."""
     # Setup: Create a temporary collection for these tests
     flag_col_id = f"di93bor.flags-{uuid.uuid4().hex[:8]}"
